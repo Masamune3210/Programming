@@ -31,7 +31,6 @@ function ConvertAndTagMP4 {
     while ($true) {
         # Get a list of all files in the source folder
         $allFiles = Get-ChildItem -Path $sourceFolder -Recurse
-        $mp4Files = $allFiles | Where-Object { $_.Extension -eq '.mp4' }
         $sourceFiles = $allFiles | Where-Object { $_.Extension -in '.mkv', '.webm', '.avi' }
         $unsupportedFiles += $allFiles | Where-Object { $_.Extension -notin '.mkv', '.webm', '.avi', '.mp4' }
 
