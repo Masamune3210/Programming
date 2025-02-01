@@ -39,7 +39,7 @@ def copy_files(file_list_path, destination_folder):
         print("No files to process.")
         return
 
-    # Sort files by size in descending order
+    # Sort files by size in ascending order
     files_to_copy.sort(key=lambda x: x['size'], reverse=False)
 
     # Update the JSON file with the sorted list of files
@@ -49,7 +49,10 @@ def copy_files(file_list_path, destination_folder):
     retag_folder = os.path.join(destination_folder, "retag")
     os.makedirs(retag_folder, exist_ok=True)  # Ensure retag folder exists
 
-    processed_count = 0 # Track how many files have been removed
+    twenty_folder = os.path.join(destination_folder, "2160") # Create 2160 folder
+    os.makedirs(twenty_folder, exist_ok=True)  # Ensure 2160 folder exists
+
+    processed_count = 0 # Track how many files have been processed
     remaining_files = list(files_to_copy)  # Start with the full file list
 
     for file_entry in files_to_copy[:]:  # Iterate over a copy to modify safely
@@ -59,32 +62,34 @@ def copy_files(file_list_path, destination_folder):
 
         if not os.path.exists(file_path):
             print(f"Skipping (not found): {file_path}")
-            continue  # Don't remove, retry next time
+            continue  # Don't process, try next time
 
-        # Decide destination based on file size
-        dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
+        if "2160" in file_name: # If the file contains "2160" in its name move it to a separate 2160 folder
+            dest_path = os.path.join(twenty_folder, file_name)
+        else: # Move other files based on their sizes into different folders
+            dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
 
         if os.path.exists(dest_path):
             print(f"Already exists (treating as copied): {file_name}")
-            remaining_files.remove(file_entry)  # Treat as successfully copied and remove
+            remaining_files.remove(file_entry)  # Treat as successfully processed and remove
             processed_count += 1
         else:
             free_space = get_free_space(destination_folder)
 
             if free_space < (file_size + EXTRA_SPACE_REQUIRED):
                 print(f"Skipping (not enough space): {file_name}")
-                continue  # Don't remove, retry next time
+                continue  # Don't process, try next time
 
             try:
                 print(f"Copying: {file_name} → {dest_path}")
                 shutil.copy2(file_path, dest_path)  # Copy with metadata
-                remaining_files.remove(file_entry)  # Remove successfully copied file
+                remaining_files.remove(file_entry)  # Remove successfully processed file
                 processed_count += 1
             except Exception as e:
                 print(f"Error copying {file_name}: {e}")
-                continue  # Don't remove, retry next time
+                continue  # Don't remove, try again later
 
-        # Update JSON file every 10 successful removals
+        # Update JSON file every 10 successful processes
         if processed_count % UPDATE_INTERVAL == 0:
             data["files"] = remaining_files
             save_json(file_list_path, data)
@@ -97,12 +102,19 @@ def copy_files(file_list_path, destination_folder):
 
 def get_paths():
     root = tk.Tk()
-    root.withdraw()  # Hide the tkinter window that comes along with Tk()
+    root.withdraw() # Hide the actual Tkinter window 
 
-    file_list = filedialog.askopenfilename(title="Select file list JSON file", initialdir=os.path.expanduser('~'), filetypes=[("json files", "*.json")]) 
-    destination = filedialog.askdirectory(title="Select destination folder", initialdir=os.path.expanduser('~'))  # Get directory path instead of a filename
+    # Directory selection
+    initial_dir = os.path.expanduser('E:\\')  # Default to Downloads folder
+    destination_folder = filedialog.askdirectory(initialdir=initial_dir, title='Select Destination Folder:')
 
-    return (file_list, destination)
+    if not destination_folder: # If user cancelled, return default path
+        print ('User cancelled the selection dialog, using default directory instead.') 
+        destination_folder = initial_dir  # Use E:\ as default
+
+    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser('G:\\Users\\Johnny\\Downloads\\Programming'), title='Select file list:', 
+    filetypes=(('json files', '*.json'),)) # Let user select json file
+    return (file_list, destination_folder)
 
 if __name__ == "__main__":
     file_list, destination = get_paths()
