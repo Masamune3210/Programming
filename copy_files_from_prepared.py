@@ -1,6 +1,8 @@
 import os
 import json
 import shutil
+import tkinter as tk
+from tkinter import filedialog
 
 # Minimum free space required beyond file size (in bytes)
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
@@ -23,7 +25,6 @@ def save_json(file_list_path, data):
 
 def copy_files(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
-    
     # Load JSON file
     try:
         with open(file_list_path, 'r', encoding='utf-8') as f:
@@ -48,7 +49,7 @@ def copy_files(file_list_path, destination_folder):
     retag_folder = os.path.join(destination_folder, "retag")
     os.makedirs(retag_folder, exist_ok=True)  # Ensure retag folder exists
 
-    processed_count = 0  # Track how many files have been removed
+    processed_count = 0 # Track how many files have been removed
     remaining_files = list(files_to_copy)  # Start with the full file list
 
     for file_entry in files_to_copy[:]:  # Iterate over a copy to modify safely
@@ -94,9 +95,17 @@ def copy_files(file_list_path, destination_folder):
 
     print("File processing complete.")
 
+def get_paths():
+    root = tk.Tk()
+    root.withdraw()  # Hide the tkinter window that comes along with Tk()
+
+    file_list = filedialog.askopenfilename(title="Select file list JSON file", initialdir=os.path.expanduser('~'), filetypes=[("json files", "*.json")]) 
+    destination = filedialog.askdirectory(title="Select destination folder", initialdir=os.path.expanduser('~'))  # Get directory path instead of a filename
+
+    return (file_list, destination)
+
 if __name__ == "__main__":
-    file_list = input("Enter the path to the JSON file with the list of files: ").strip()
-    destination = input("Enter the destination folder: ").strip()
+    file_list, destination = get_paths()
 
     if not os.path.isdir(destination):
         print("Invalid destination folder.")
