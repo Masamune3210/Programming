@@ -3,6 +3,7 @@ import json
 import shutil
 import tkinter as tk
 from tkinter import filedialog
+from tqdm import tqdm  # Add tqdm for progress bar
 
 # Minimum free space required beyond file size (in bytes)
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
@@ -41,6 +42,22 @@ def copy_files(file_list_path, destination_folder):
     # Sort files by size in ascending order
     files_to_copy.sort(key=lambda x: x['size'], reverse=False)
 
+    # Calculate how many files can be copied based on available space
+    free_space = get_free_space(destination_folder)
+    total_space_needed = 0
+    files_to_copyable = []
+    for file_entry in files_to_copy:
+        file_size = file_entry['size']
+        if total_space_needed + file_size + EXTRA_SPACE_REQUIRED <= free_space:
+            files_to_copyable.append(file_entry)
+            total_space_needed += file_size
+        else:
+            break
+
+    # Display how many files can be copied
+    print(f"Free space: {free_space / (1024**3):.2f} GB")
+    print(f"Space required for {len(files_to_copyable)} files: {total_space_needed / (1024**3):.2f} GB")
+
     # Update the JSON file with the sorted list of files
     data["files"] = files_to_copy
     save_json(file_list_path, data)
@@ -54,44 +71,43 @@ def copy_files(file_list_path, destination_folder):
     processed_count = 0 # Track how many files have been processed
     remaining_files = list(files_to_copy)  # Start with the full file list
 
-    for file_entry in files_to_copy[:]:  # Iterate over a copy to modify safely
-        file_path = file_entry["file"]
-        file_name = os.path.basename(file_path)
-        file_size = file_entry["size"]
+    # Create progress bar using tqdm
+    with tqdm(total=len(files_to_copyable), desc="Copying files", unit="file") as pbar:
+        for file_entry in files_to_copyable[:]:  # Iterate over a copy to modify safely
+            file_path = file_entry["file"]
+            file_name = os.path.basename(file_path)
+            file_size = file_entry["size"]
 
-        if not os.path.exists(file_path):
-            print(f"Skipping (not found): {file_path}")
-            continue  # Don't process, try next time
-
-        if "2160" in file_name: # If the file contains "2160" in its name move it to a separate 2160 folder
-            dest_path = os.path.join(twenty_folder, file_name)
-        else: # Move other files based on their sizes into different folders
-            dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
-
-        if os.path.exists(dest_path):
-            print(f"Already exists (treating as copied): {file_name}")
-            remaining_files.remove(file_entry)  # Treat as successfully processed and remove
-            processed_count += 1
-        else:
-            free_space = get_free_space(destination_folder)
-
-            if free_space < (file_size + EXTRA_SPACE_REQUIRED):
-                print(f"Skipping (not enough space): {file_name}")
+            if not os.path.exists(file_path):
+                print(f"Skipping (not found): {file_path}")
                 continue  # Don't process, try next time
 
-            try:
-                print(f"Copying: {file_name} → {dest_path}")
-                shutil.copy2(file_path, dest_path)  # Copy with metadata
-                remaining_files.remove(file_entry)  # Remove successfully processed file
-                processed_count += 1
-            except Exception as e:
-                print(f"Error copying {file_name}: {e}")
-                continue  # Don't remove, try again later
+            if "2160" in file_name:  # If the file contains "2160" in its name move it to a separate 2160 folder
+                dest_path = os.path.join(twenty_folder, file_name)
+            else:  # Move other files based on their sizes into different folders
+                dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
 
-        # Update JSON file every 10 successful processes
-        if processed_count % UPDATE_INTERVAL == 0:
-            data["files"] = remaining_files
-            save_json(file_list_path, data)
+            if os.path.exists(dest_path):
+                print(f"Already exists (treating as copied): {file_name}")
+                remaining_files.remove(file_entry)  # Treat as successfully processed and remove
+                processed_count += 1
+            else:
+                try:
+                    print(f"Copying: {file_name} → {dest_path}")
+                    shutil.copy2(file_path, dest_path)  # Copy with metadata
+                    remaining_files.remove(file_entry)  # Remove successfully processed file
+                    processed_count += 1
+                except Exception as e:
+                    print(f"Error copying {file_name}: {e}")
+                    continue  # Don't remove, try again later
+
+            # Update the progress bar
+            pbar.update(1)
+
+            # Update JSON file every successful process
+            if processed_count % UPDATE_INTERVAL == 0:
+                data["files"] = remaining_files
+                save_json(file_list_path, data)
 
     # Final update to JSON file after loop
     data["files"] = remaining_files
