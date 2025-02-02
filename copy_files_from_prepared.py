@@ -7,7 +7,7 @@ from tkinter import filedialog
 # Minimum free space required beyond file size (in bytes)
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
 RETAG_THRESHOLD = 500 * 1024 * 1024  # 500MB
-UPDATE_INTERVAL = 10  # Update JSON file every 10 successful removals
+UPDATE_INTERVAL = 1  # Update JSON after every successful removal
 
 def get_free_space(folder):
     """Return free space available on the drive containing the folder using shutil."""
@@ -19,7 +19,6 @@ def save_json(file_list_path, data):
     try:
         with open(file_list_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
-        print("JSON file updated.")
     except Exception as e:
         print(f"Error updating JSON file: {e}")
 
