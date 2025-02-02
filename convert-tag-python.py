@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+from tqdm import tqdm
 
 # ========== CONFIGURABLE SETTINGS ==========
 ToolText = "HandBrake 1.9.0 2024120100"  # Text to be written to the Tool tag
@@ -10,13 +11,13 @@ mp4tagPath = r"C:\\Tools\\mp4tag\\mp4tag.exe"  # Path to the mp4tag executable
 def convert_and_tag_mp4(source_folder, destination_folder):
     # Ensure the source folder exists
     if not os.path.exists(source_folder):
-        print(f"Source folder does not exist: {source_folder}")
+        print(f"\nSource folder does not exist: {source_folder}")
         return
 
     # Ensure the destination folder exists or create it
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
-        print(f"Destination folder created: {destination_folder}")
+        print(f"\nDestination folder created: {destination_folder}")
 
     # Initialize lists to track unprocessed files
     unsupported_files = []
@@ -34,11 +35,11 @@ def convert_and_tag_mp4(source_folder, destination_folder):
         unsupported_files.extend([file for file in all_files if not file.lower().endswith(('.mkv', '.webm', '.avi', '.mp4'))])
 
         conversion_made = False
-        for file in source_files:
+        for file in tqdm(source_files, desc="Converting Files", unit="file"):
             output_file_path = os.path.join(source_folder, os.path.basename(file).replace(os.path.splitext(file)[1], ".mp4"))
 
             if os.path.exists(output_file_path):
-                print(f"Skipping existing file: {output_file_path}")
+                print(f"\nSkipping existing file: {output_file_path}")
                 continue
 
             ffmpeg_command = [
@@ -56,60 +57,60 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 ffprobe_result = subprocess.run(ffprobe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
                 if not ffprobe_result.stdout:
-                    print(f"Error: Verification failed for '{output_file_path}'. Keeping original file.")
+                    print(f"\nError: Verification failed for '{output_file_path}'. Keeping original file.")
                     failed_conversions.append(file)
                     os.remove(output_file_path)
                     continue
 
                 # If ffprobe is successful, delete the original file
                 os.remove(file)
-                print(f"Converted and removed original file: {file}")
+                print(f"\nConverted and removed original file: {file}")
                 conversion_made = True
             except subprocess.CalledProcessError:
-                print(f"Failed to convert file: {file}")
+                print(f"\nFailed to convert file: {file}")
                 failed_conversions.append(file)
 
         # Restart the loop if any files were converted
         if conversion_made:
-            print("Rescanning the folder for newly converted files...")
+            print("\nRescanning the folder for newly converted files...")
             continue
         else:
             break
 
     # Tag all MP4 files (excluding failed conversions)
     all_mp4_files = [file for file in all_files if file.lower().endswith('.mp4')]
-    for file in all_mp4_files:
+    for file in tqdm(all_mp4_files, desc="Tagging Files", unit="file"):
         output_file = os.path.join(destination_folder, os.path.basename(file))
 
         # Check if the tagged file already exists
         if os.path.exists(output_file):
-            print(f"Skipping tagging, file already exists: {output_file}")
+            print(f"\nSkipping tagging, file already exists: {output_file}")
             os.remove(file)  # Delete original file
             continue
 
         escaped_tool_text = f'{ToolText}'
         command = [mp4tagPath, '--set', f'Tool:S:{escaped_tool_text}', file, output_file]
 
-        print(f"Tagging file: {file}")
+        print(f"\nTagging file: {file}")
         try:
             subprocess.run(command, check=True)
-            print(f"Success: Tagged file saved to '{output_file}'.")
+            print(f"\nSuccess: Tagged file saved to '{output_file}'.")
             os.remove(file)  # Delete original file after successful tagging
         except subprocess.CalledProcessError:
-            print(f"Error: Failed to write the Tool tag for '{file}'.")
+            print(f"\nError: Failed to write the Tool tag for '{file}'.")
             failed_tagging_files.append(file)
 
     # Organize files into subfolders of 99 files each
     all_tagged_files = [file for file in os.listdir(destination_folder) if file.lower().endswith('.mp4')]
     if len(all_tagged_files) > 99:
-        print("Organizing files into folders of 99...")
+        print("\nOrganizing files into folders of 99...")
 
         folder_index = 1
         current_folder = os.path.join(destination_folder, str(folder_index))
         os.makedirs(current_folder, exist_ok=True)
 
         file_count = 0
-        for file in all_tagged_files:
+        for file in tqdm(all_tagged_files, desc="Moving Files", unit="file"):
             if file_count >= 99:
                 folder_index += 1
                 current_folder = os.path.join(destination_folder, str(folder_index))
@@ -117,28 +118,28 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 file_count = 0
 
             shutil.move(os.path.join(destination_folder, file), os.path.join(current_folder, file))
-            print(f"Moved file: {file} to folder: {folder_index}")
+            print(f"\nMoved file: {file} to folder: {folder_index}")
             file_count += 1
     else:
-        print("Less than 100 files; skipping folder organization.")
+        print("\nLess than 100 files; skipping folder organization.")
 
     # Print summary of unprocessed files
     if unsupported_files:
-        print("The following unsupported files were not processed:")
+        print("\nThe following unsupported files were not processed:")
         for file in unsupported_files:
             print(file)
 
     if failed_conversions:
-        print("The following files failed verification and were not deleted:")
+        print("\nThe following files failed verification and were not deleted:")
         for file in failed_conversions:
             print(file)
 
     if failed_tagging_files:
-        print("The following files failed tagging:")
+        print("\nThe following files failed tagging:")
         for file in failed_tagging_files:
             print(file)
 
-    print("Script completed successfully.")
+    print("\nScript completed successfully.")
 
 
 # Example usage
