@@ -86,6 +86,14 @@ function ConvertAndTagMP4 {
     $allMP4Files = Get-ChildItem -Path $sourceFolder -Filter "*.mp4" -File
     foreach ($file in $allMP4Files) {
         $outputFile = Join-Path -Path $destinationFolder -ChildPath $file.Name
+
+        # Check if the tagged file already exists
+        if (Test-Path -Path $outputFile) {
+            Write-Host "Skipping tagging, file already exists: $outputFile" -ForegroundColor Cyan
+            Remove-Item -LiteralPath $file.FullName -Force  # Delete original file
+            continue
+        }
+
         $escapedToolText = "`"$ToolText`"" # Escape quotes for the Tool text
         $command = "$mp4tagPath --set Tool:S:$escapedToolText `"$($file.FullName)`" `"$outputFile`""
 
@@ -97,6 +105,7 @@ function ConvertAndTagMP4 {
                 $failedTaggingFiles += $file
             } else {
                 Write-Host "Success: Tagged file saved to '$outputFile'." -ForegroundColor Green
+                Remove-Item -LiteralPath $file.FullName -Force  # Delete original file after successful tagging
             }
         } catch {
             Write-Error "Failed to tag file: $($file.FullName)"
