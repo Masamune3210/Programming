@@ -124,10 +124,10 @@ def get_paths():
     destination_folder = filedialog.askdirectory(initialdir=initial_dir, title='Select Destination Folder:')
 
     if not destination_folder: # If user cancelled, return default path
-        print ('User cancelled the selection dialog, using default directory instead.') 
+        print('User cancelled the selection dialog, using default directory instead.')
         destination_folder = initial_dir  # Use E:\ as default
 
-    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser('G:\\Users\\Johnny\\Downloads\\Programming'), title='Select file list:', 
+    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser('G:\\Users\\Johnny\\Downloads\\Programming'), title='Select file list:',
     filetypes=(('json files', '*.json'),)) # Let user select json file
     return (file_list, destination_folder)
 
