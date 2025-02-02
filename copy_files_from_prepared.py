@@ -54,6 +54,11 @@ def copy_files(file_list_path, destination_folder):
         else:
             break
 
+    # Check if there's enough space to copy any files
+    if not files_to_copy:
+        print(f"Not enough space to copy any files. Free space: {free_space / (1024**3):.2f} GB")
+        return
+
     # Display how many files can be copied
     print(f"Free space: {free_space / (1024**3):.2f} GB")
     print(f"Space required for {len(files_to_copy)} files: {total_space_needed / (1024**3):.2f} GB")
