@@ -45,18 +45,23 @@ def copy_files(file_list_path, destination_folder):
     # Calculate how many files can be copied based on available space
     free_space = get_free_space(destination_folder)
     total_space_needed = 0
-    files_to_copyable = []
+    files_to_copy = []
     for file_entry in files_to_copy:
         file_size = file_entry['size']
         if total_space_needed + file_size + EXTRA_SPACE_REQUIRED <= free_space:
-            files_to_copyable.append(file_entry)
+            files_to_copy.append(file_entry)
             total_space_needed += file_size
         else:
             break
 
+    # Check if there's enough space to copy any files
+    if not files_to_copy:
+        print(f"Not enough space to copy any files. Free space: {free_space / (1024**3):.2f} GB")
+        return
+
     # Display how many files can be copied
     print(f"Free space: {free_space / (1024**3):.2f} GB")
-    print(f"Space required for {len(files_to_copyable)} files: {total_space_needed / (1024**3):.2f} GB")
+    print(f"Space required for {len(files_to_copy)} files: {total_space_needed / (1024**3):.2f} GB")
 
     # Update the JSON file with the sorted list of files
     data["files"] = files_to_copy
@@ -72,8 +77,8 @@ def copy_files(file_list_path, destination_folder):
     remaining_files = list(files_to_copy)  # Start with the full file list
 
     # Create progress bar using tqdm
-    with tqdm(total=len(files_to_copyable), desc="Copying files", unit="file") as pbar:
-        for file_entry in files_to_copyable[:]:  # Iterate over a copy to modify safely
+    with tqdm(total=len(files_to_copy), desc="Copying files", unit="file") as pbar:
+        for file_entry in files_to_copy[:]:  # Iterate over a copy to modify safely
             file_path = file_entry["file"]
             file_name = os.path.basename(file_path)
             file_size = file_entry["size"]
