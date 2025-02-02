@@ -79,7 +79,7 @@ def copy_files(file_list_path, destination_folder):
             file_size = file_entry["size"]
 
             if not os.path.exists(file_path):
-                print(f"Skipping (not found): {file_path}")
+                print(f"\nSkipping (not found): {file_path}")
                 continue  # Don't process, try next time
 
             if "2160" in file_name:  # If the file contains "2160" in its name move it to a separate 2160 folder
@@ -88,12 +88,12 @@ def copy_files(file_list_path, destination_folder):
                 dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
 
             if os.path.exists(dest_path):
-                print(f"Already exists (treating as copied): {file_name}")
+                print(f"\nAlready exists (treating as copied): {file_name}")
                 remaining_files.remove(file_entry)  # Treat as successfully processed and remove
                 processed_count += 1
             else:
                 try:
-                    print(f"Copying: {file_name} → {dest_path}")
+                    print(f"\nCopying: {file_name} → {dest_path}")
                     shutil.copy2(file_path, dest_path)  # Copy with metadata
                     remaining_files.remove(file_entry)  # Remove successfully processed file
                     processed_count += 1
