@@ -1,4 +1,5 @@
 import os
+import shutil
 
 def get_user_input(prompt):
     while True:
@@ -8,7 +9,7 @@ def get_user_input(prompt):
         else:
             print("Invalid directory. Please enter a valid path.")
 
-def compare_and_keep_smaller(source_dir, dest_dir):
+def compare_and_keep_smaller(source_dir, dest_dir, retag_dir):
     for root, _, files in os.walk(source_dir):
         for file in files:
             source_path = os.path.join(root, file)
@@ -29,12 +30,12 @@ def compare_and_keep_smaller(source_dir, dest_dir):
                     print(f"Keeping source: {source_path} (smaller than destination)")
                     os.remove(dest_path)
                 elif source_size > dest_size:
-                    print(f"Keeping destination: {dest_path} (smaller than source)")
+                    print(f"Moving source to retag folder: {source_path} (larger than destination)")
                     try:
-                        os.remove(source_path)
-                        print(f"Deleted source file: {source_path}")
+                        os.makedirs(retag_dir, exist_ok=True)
+                        shutil.move(source_path, os.path.join(retag_dir, file))
                     except Exception as e:
-                        print(f"Error deleting source file {source_path}: {e}")
+                        print(f"Error moving source file {source_path} to retag folder: {e}")
                 else:
                     print(f"Keeping source: {source_path} (same size as destination)")
                     os.remove(dest_path)
@@ -42,8 +43,9 @@ def compare_and_keep_smaller(source_dir, dest_dir):
 def main():
     source_dir = get_user_input("Enter the source directory: ")
     dest_dir = get_user_input("Enter the destination directory: ")
+    retag_dir = get_user_input("Enter the retag directory: ")
     
-    compare_and_keep_smaller(source_dir, dest_dir)
+    compare_and_keep_smaller(source_dir, dest_dir, retag_dir)
     print("Processing complete.")
 
 if __name__ == "__main__":
