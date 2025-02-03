@@ -23,6 +23,7 @@ def main():
     file_encoder_map = {}
     
     for root, _, files in os.walk(source_folder):
+        print(f"Scanning directory: {root}")  # Printing current directory being scanned
         for file in files:
             if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv)$', file, re.IGNORECASE):
                 file_path = os.path.join(root, file)
