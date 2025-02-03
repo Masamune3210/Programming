@@ -118,6 +118,11 @@ def copy_files(file_list_path, destination_folder):
     save_json(file_list_path, data)
     print("File processing complete.")
 
+    # Check if the log file is empty and delete it if it is
+    if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
+        os.remove('copy_errors.log')
+        print("Deleted empty copy_errors.log file.")
+        
 
 def get_paths():
     root = tk.Tk()
