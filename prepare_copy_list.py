@@ -2,6 +2,7 @@ import os
 import subprocess
 import re
 import json
+from tqdm import tqdm  # Progress bar support
 
 OUTPUT_FILE = "files_to_process.json"
 
@@ -14,6 +15,7 @@ def get_video_encoder(file_path):
 
 def main():
     source_folder = input("Enter the path to the folder containing video files: ")
+    print("Scanning for video files...")
     
     encoders = set()
     video_files = []
@@ -21,27 +23,31 @@ def main():
     
     for root, _, files in os.walk(source_folder):
         for file in files:
-            if re.search(r'(?<!\bEncoded)\.(mp4|mkv|avi|mov|flv|wmv)$', file, re.IGNORECASE):
+            if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv)$', file, re.IGNORECASE):
                 video_files.append(os.path.join(root, file))
     
-    for video_file in video_files:
+    print(f"Found {len(video_files)} video files. Checking encoders...")
+    
+    for video_file in tqdm(video_files, desc="Processing files", unit="file"):
         encoder = get_video_encoder(video_file)
         if encoder is None:
             broken_files.append(video_file)
-            print(f"Broken file found: {video_file}")
+            print(f"[WARNING] Broken file detected: {video_file}")
         else:
             encoders.add(encoder)
     
     encoders = ["Any"] + list(encoders)
-    print("Encoders found:")
+    print("\nEncoders found:")
     for idx, encoder in enumerate(encoders):
         print(f"{idx + 1}. {encoder}")
     
     choice = int(input("Select the encoder to keep (enter the number): ")) - 1
     selected_encoder = encoders[choice].strip().lower()
     
+    print("Filtering files based on encoder selection...")
+    
     files_to_process = []
-    for file in video_files:
+    for file in tqdm(video_files, desc="Filtering", unit="file"):
         if file in broken_files:
             continue
         file_encoder = get_video_encoder(file)
@@ -53,7 +59,8 @@ def main():
     with open(OUTPUT_FILE, "w") as f:
         json.dump({"encoder": selected_encoder, "files": files_to_process}, f, indent=4)
     
-    print(f"List of files to process has been saved to {OUTPUT_FILE}")
+    print(f"List of {len(files_to_process)} files to process has been saved to {OUTPUT_FILE}")
+    print("Processing complete.")
 
 if __name__ == "__main__":
     main()
