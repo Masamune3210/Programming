@@ -1,5 +1,3 @@
-dfdwssvv
-
 import os
 import json
 import shutil
@@ -44,30 +42,30 @@ def copy_files(file_list_path, destination_folder):
     # Sort files by size in ascending order
     files_to_copy.sort(key=lambda x: x['size'], reverse=False)
 
+    # Update the JSON file with the sorted list of files
+    data["files"] = files_to_copy
+    save_json(file_list_path, data)
+
     # Calculate how many files can be copied based on available space
     free_space = get_free_space(destination_folder)
     total_space_needed = 0
-    files_to_copy = []
+    eligible_files = []
     for file_entry in files_to_copy:
         file_size = file_entry['size']
         if total_space_needed + file_size + EXTRA_SPACE_REQUIRED <= free_space:
-            files_to_copy.append(file_entry)
+            eligible_files.append(file_entry)
             total_space_needed += file_size
         else:
             break
 
     # Check if there's enough space to copy any files
-    if not files_to_copy:
+    if not eligible_files:
         print(f"Not enough space to copy any files. Free space: {free_space / (1024**3):.2f} GB")
         return
 
     # Display how many files can be copied
     print(f"Free space: {free_space / (1024**3):.2f} GB")
-    print(f"Space required for {len(files_to_copy)} files: {total_space_needed / (1024**3):.2f} GB")
-
-    # Update the JSON file with the sorted list of files
-    data["files"] = files_to_copy
-    save_json(file_list_path, data)
+    print(f"Space required for {len(eligible_files)} files: {total_space_needed / (1024**3):.2f} GB")
 
     retag_folder = os.path.join(destination_folder, "retag")
     os.makedirs(retag_folder, exist_ok=True)  # Ensure retag folder exists
@@ -76,11 +74,11 @@ def copy_files(file_list_path, destination_folder):
     os.makedirs(twenty_folder, exist_ok=True)  # Ensure 2160 folder exists
 
     processed_count = 0 # Track how many files have been processed
-    remaining_files = list(files_to_copy)  # Start with the full file list
+    remaining_files = list(files_to_copy)  # Copy full list initially
 
     # Create progress bar using tqdm
-    with tqdm(total=len(files_to_copy), desc="Copying files", unit="file") as pbar:
-        for file_entry in files_to_copy[:]:  # Iterate over a copy to modify safely
+    with tqdm(total=len(eligible_files), desc="Copying files", unit="file") as pbar:
+        for file_entry in eligible_files[:]:  # Iterate over a copy to modify safely
             file_path = file_entry["file"]
             file_name = os.path.basename(file_path)
             file_size = file_entry["size"]
@@ -115,12 +113,6 @@ def copy_files(file_list_path, destination_folder):
             if processed_count % UPDATE_INTERVAL == 0:
                 data["files"] = remaining_files
                 save_json(file_list_path, data)
-
-    # Final update to JSON file after loop
-    data["files"] = remaining_files
-    save_json(file_list_path, data)
-
-    print("File processing complete.")
 
 def get_paths():
     root = tk.Tk()
