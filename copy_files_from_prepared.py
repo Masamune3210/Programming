@@ -76,6 +76,9 @@ def copy_files(file_list_path, destination_folder):
     processed_count = 0
     remaining_files = list(files_to_copy)
 
+    current_file_path = None  # To store the current file being processed
+    current_file_entry = None  # To store the current file entry in the list
+
     try:
         with tqdm(total=len(eligible_files), desc="Copying files", unit="file") as pbar:
             for file_entry in eligible_files[:]:
@@ -100,8 +103,10 @@ def copy_files(file_list_path, destination_folder):
                     try:
                         print(f"\nCopying: {file_name} → {dest_path}")
                         shutil.copy2(file_path, dest_path)
-                        remaining_files.remove(file_entry)
+                        remaining_files.remove(file_entry)  # Only remove after successful copy
                         processed_count += 1
+                        current_file_path = file_path  # Store the current file path being copied
+                        current_file_entry = file_entry  # Store the file entry for later removal
                     except Exception as e:
                         logging.error(f"Error copying {file_name}: {e}")
                         continue
@@ -111,6 +116,18 @@ def copy_files(file_list_path, destination_folder):
                 save_json(file_list_path, data)
     except KeyboardInterrupt:
         print("\nProcess interrupted. Saving progress...")
+
+        # Clean up: delete the partially copied file if it was being copied
+        if current_file_path and os.path.exists(current_file_path):
+            print(f"Deleting partially copied file: {current_file_path}")
+            os.remove(current_file_path)
+
+        # Only remove the file entry if the file was copied successfully
+        if current_file_entry:
+            print(f"Removing {current_file_entry['file']} from JSON list.")
+            data["files"].remove(current_file_entry)
+            save_json(file_list_path, data)
+
         save_json(file_list_path, data)
         raise
 
@@ -122,7 +139,7 @@ def copy_files(file_list_path, destination_folder):
     if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
         os.remove('copy_errors.log')
         print("Deleted empty copy_errors.log file.")
-        
+
 
 def get_paths():
     root = tk.Tk()
