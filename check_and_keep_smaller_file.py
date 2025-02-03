@@ -21,8 +21,12 @@ def compare_and_keep_smaller(source_dir, dest_dir):
                 if source_size < dest_size:
                     print(f"Keeping source: {source_path} (smaller than destination)")
                     os.remove(dest_path)
+                elif source_size > dest_size:
+                    print(f"Keeping destination: {dest_path} (smaller than source)")
+                    os.remove(source_path)
                 else:
-                    print(f"Keeping destination: {dest_path} (smaller or same size)")
+                    print(f"Keeping source: {source_path} (same size as destination)")
+                    os.remove(dest_path)
 
 def main():
     source_dir = get_user_input("Enter the source directory: ")
