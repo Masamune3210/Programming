@@ -20,21 +20,20 @@ def main():
     encoders = set()
     video_files = []
     broken_files = []
+    file_encoder_map = {}
     
     for root, _, files in os.walk(source_folder):
         for file in files:
             if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv)$', file, re.IGNORECASE):
-                video_files.append(os.path.join(root, file))
-    
-    print(f"Found {len(video_files)} video files. Checking encoders...")
-    
-    for video_file in tqdm(video_files, desc="Processing files", unit="file"):
-        encoder = get_video_encoder(video_file)
-        if encoder is None:
-            broken_files.append(video_file)
-            print(f"[WARNING] Broken file detected: {video_file}")
-        else:
-            encoders.add(encoder)
+                file_path = os.path.join(root, file)
+                video_files.append(file_path)
+                encoder = get_video_encoder(file_path)
+                if encoder is None:
+                    broken_files.append(file_path)
+                    print(f"[WARNING] Broken file detected: {file_path}")
+                else:
+                    encoders.add(encoder)
+                    file_encoder_map[file_path] = encoder
     
     encoders = ["Any"] + list(encoders)
     print("\nEncoders found:")
@@ -50,7 +49,7 @@ def main():
     for file in tqdm(video_files, desc="Filtering", unit="file"):
         if file in broken_files:
             continue
-        file_encoder = get_video_encoder(file)
+        file_encoder = file_encoder_map.get(file, None)
         file_extension = file.lower().split('.')[-1]
         if file_extension == "mkv" or (selected_encoder != "any" and file_encoder and file_encoder.strip().lower() != selected_encoder):
             file_size = os.path.getsize(file)  # Get the file size in bytes
