@@ -132,12 +132,18 @@ def copy_files(file_list_path, destination_folder):
         if current_file_path and os.path.exists(current_file_path):
             print(f"Deleting partially copied file: {current_file_path}")
             os.remove(current_file_path)
+            logging.shutdown()
+            if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
+                os.remove('copy_errors.log')
+                print("Deleted empty copy_errors.log file")
         raise
 
     data["files"] = remaining_files
     save_json(file_list_path, data)
     print("File processing complete.")
 
+    # Flush and close the log file before checking if it's empty
+    logging.shutdown()
     # Check if the log file is empty and delete it if it is
     if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
         os.remove('copy_errors.log')
