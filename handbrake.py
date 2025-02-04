@@ -20,7 +20,6 @@ def find_handbrakecli():
     return handbrakecli_path
 
 def kill_process(process):
-    #Forcefully kill a process and its children.
     if process is None:
         return
     
@@ -80,19 +79,14 @@ def encode_video(input_file, output_file, preset_file, handbrakecli_path):
     try:
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1) as process:
             current_process = process
-            progress_bar = tqdm(total=100, unit="%", desc="Encoding Progress", ncols=80)
-
+            progress_bar = tqdm(total=100, unit="%", desc="Encoding Progress", ncols=80, dynamic_ncols=True, position=0, leave=True)
             for line in process.stdout:
-                sys.stdout.write(line)
-                sys.stdout.flush()
-
                 progress = parse_progress(line)
                 if progress is not None:
-                    progress_bar.n = progress
-                    progress_bar.refresh()
+                    progress_bar.n = progress  # Set progress bar to exact value
+                    progress_bar.refresh()  # Refresh instead of update to prevent new lines
 
             progress_bar.close()
-
             process.wait()
 
         if process.returncode != 0:
@@ -140,32 +134,49 @@ def get_preset_for_file(file_path, source_folder):
 def process_folder(source_folder, destination_folder, preset_files, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
 
+    # Collect all files first to determine total count
+    all_files = []
     for root, dirs, files in os.walk(source_folder):
         for d in ["more", "retag"]:
             if d in dirs:
                 dirs.remove(d)
-
+        
         for filename in files:
             if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
-                file_path = os.path.join(root, filename)
-                preset_file = get_preset_for_file(file_path, source_folder)
+                all_files.append(os.path.join(root, filename))
 
-                if preset_file not in preset_files:
-                    print(f"Preset file '{preset_file}' not found. Exiting.")
-                    sys.exit(1)
+    total_files = len(all_files)
+    if total_files == 0:
+        print("No files found to process. Exiting.")
+        return
 
-                preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
-                if not os.path.exists(preset_path):
-                    print(f"Preset file '{preset_file}' does not exist. Exiting.")
-                    sys.exit(1)
+    # Create progress bar for file processing
+    file_progress = tqdm(total=total_files, desc="Total Progress", unit="file", ncols=80, dynamic_ncols=True, position=0, leave=True)
 
-                output_file = os.path.join(destination_folder, filename)
-                print(f"Processing: {filename}")
+    for file_path in all_files:
+        filename = os.path.basename(file_path)
+        preset_file = get_preset_for_file(file_path, source_folder)
 
-                if encode_video(file_path, output_file, preset_path, handbrakecli_path):
-                    handle_file(file_path, output_file, source_folder)
-                else:
-                    handle_encoding_error(file_path, source_folder)
+        if preset_file not in preset_files:
+            print(f"Preset file '{preset_file}' not found. Exiting.")
+            sys.exit(1)
+
+        preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
+        if not os.path.exists(preset_path):
+            print(f"Preset file '{preset_file}' does not exist. Exiting.")
+            sys.exit(1)
+
+        output_file = os.path.join(destination_folder, filename)
+        print(f"\nProcessing: {filename}")
+
+        if encode_video(file_path, output_file, preset_path, handbrakecli_path):
+            handle_file(file_path, output_file, source_folder)
+        else:
+            handle_encoding_error(file_path, source_folder)
+
+        file_progress.update(1)  # Update file progress bar
+
+    file_progress.close()
 
 def main():
     script_directory = os.path.dirname(os.path.realpath(__file__))
