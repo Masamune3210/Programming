@@ -27,6 +27,15 @@ def save_json(file_list_path, data):
     except Exception as e:
         logging.error(f"Error updating JSON file: {e}")
 
+def delete_partial_file(file_path):
+    """Delete the file if it exists and is not fully copied."""
+    if os.path.exists(file_path):
+        try:
+            print(f"Deleting partial file: {file_path}")
+            os.remove(file_path)
+        except Exception as e:
+            logging.error(f"Error deleting partial file {file_path}: {e}")
+
 def copy_files(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
     try:
@@ -109,6 +118,7 @@ def copy_files(file_list_path, destination_folder):
                         current_file_entry = file_entry  # Store the file entry for later removal
                     except Exception as e:
                         logging.error(f"Error copying {file_name}: {e}")
+                        delete_partial_file(dest_path)  # If an error occurs, delete the partial file immediately
                         continue
 
                 pbar.update(1)
