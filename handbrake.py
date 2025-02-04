@@ -16,7 +16,7 @@ def encode_video(input_file, output_file, preset_file):
         subprocess.run(command, check=True)
         print(f"Encoding complete: {output_file}")
     except subprocess.CalledProcessError as e:
-        print(f"Error encoding video: {e}")
+        print(f"Error encoding video {input_file}: {e}")
         return False
     return True
 
@@ -40,6 +40,16 @@ def handle_file(input_file, output_file, source_folder):
         shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
         print(f"Output file is not smaller. Moved input file to 'retag' folder.")
 
+def handle_encoding_error(input_file, source_folder):
+    # Create the 'errored' folder if it doesn't exist
+    errored_folder = os.path.join(source_folder, "errored")
+    if not os.path.exists(errored_folder):
+        os.makedirs(errored_folder)
+
+    # Move the source file to the 'errored' folder
+    shutil.move(input_file, os.path.join(errored_folder, os.path.basename(input_file)))
+    print(f"Encoding error occurred. Moved {input_file} to 'errored' folder.")
+
 def process_folder(source_folder, destination_folder, preset_file):
     # Ensure the destination folder exists
     if not os.path.exists(destination_folder):
@@ -59,6 +69,9 @@ def process_folder(source_folder, destination_folder, preset_file):
             if encode_video(file_path, output_file, preset_file):
                 # After encoding, check file sizes and handle accordingly
                 handle_file(file_path, output_file, source_folder)
+            else:
+                # If encoding fails, handle the error by moving the file to 'errored'
+                handle_encoding_error(file_path, source_folder)
 
 def main():
     # Scan the script directory for all .json files, excluding 'files_to_process.json'
