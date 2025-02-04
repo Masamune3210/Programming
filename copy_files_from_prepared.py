@@ -111,14 +111,15 @@ def copy_files(file_list_path, destination_folder):
                 else:
                     try:
                         print(f"\nCopying: {file_name} → {dest_path}")
+                        current_file_path = dest_path  # Store the current destination path of the file being copied
                         shutil.copy2(file_path, dest_path)
-                        remaining_files.remove(file_entry)  # Only remove after successful copy
+                        # If copy was successful, remove the file from the remaining list
+                        remaining_files.remove(file_entry)
                         processed_count += 1
-                        current_file_path = file_path  # Store the current file path being copied
-                        current_file_entry = file_entry  # Store the file entry for later removal
+
                     except Exception as e:
                         logging.error(f"Error copying {file_name}: {e}")
-                        delete_partial_file(dest_path)  # If an error occurs, delete the partial file immediately
+                        delete_partial_file(current_file_path)  # Delete the partial file at the current destination
                         continue
 
                 pbar.update(1)
@@ -131,7 +132,6 @@ def copy_files(file_list_path, destination_folder):
         if current_file_path and os.path.exists(current_file_path):
             print(f"Deleting partially copied file: {current_file_path}")
             os.remove(current_file_path)
-        save_json(file_list_path, data)
         raise
 
     data["files"] = remaining_files
@@ -143,7 +143,6 @@ def copy_files(file_list_path, destination_folder):
         os.remove('copy_errors.log')
         print("Deleted empty copy_errors.log file.")
 
-
 def get_paths():
     root = tk.Tk()
     root.withdraw()
@@ -154,8 +153,11 @@ def get_paths():
         print('User cancelled the selection dialog, using default directory instead.')
         destination_folder = initial_dir
 
-    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser('G:\\Users\\Johnny\\Downloads\\Programming'), title='Select file list:',
-    filetypes=(('json files', '*.json'),))
+    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser('G:\\Users\\Johnny\\Downloads\\Programming'), title='Select File List:', filetypes=(('JSON Files', '*.json'),))
+
+    if not file_list:
+        print('User cancelled the file list selection.')
+    
     return file_list, destination_folder
 
 if __name__ == "__main__":
