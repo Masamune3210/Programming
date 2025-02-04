@@ -50,28 +50,54 @@ def handle_encoding_error(input_file, source_folder):
     shutil.move(input_file, os.path.join(errored_folder, os.path.basename(input_file)))
     print(f"Encoding error occurred. Moved {input_file} to 'errored' folder.")
 
-def process_folder(source_folder, destination_folder, preset_file):
+def get_preset_for_file(file_path, source_folder):
+    # Determine the preset based on the directory structure
+    relative_path = os.path.relpath(file_path, source_folder)
+    folder_name = os.path.dirname(relative_path)
+
+    if folder_name.lower() == "kids":
+        return "kids.json"
+    elif folder_name.lower() == "2160":
+        return "4k.json"
+    else:
+        return "1080.json"
+
+def process_folder(source_folder, destination_folder, preset_files):
     # Ensure the destination folder exists
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
 
-    # Loop through each file in the source folder
-    for filename in os.listdir(source_folder):
-        file_path = os.path.join(source_folder, filename)
+    # Walk through the source folder recursively
+    for root, dirs, files in os.walk(source_folder):
+        for filename in files:
+            file_path = os.path.join(root, filename)
 
-        # Check if it's a video file (basic check for common extensions)
-        if os.path.isfile(file_path) and filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
-            # Prepare the output file path (same filename as input)
-            output_file = os.path.join(destination_folder, filename)
-            print(f"Processing: {filename}")
-            
-            # Call HandBrakeCLI to encode the video with the selected preset
-            if encode_video(file_path, output_file, preset_file):
-                # After encoding, check file sizes and handle accordingly
-                handle_file(file_path, output_file, source_folder)
-            else:
-                # If encoding fails, handle the error by moving the file to 'errored'
-                handle_encoding_error(file_path, source_folder)
+            # Check if it's a video file (basic check for common extensions)
+            if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
+                # Determine which preset to use based on folder name
+                preset_file = get_preset_for_file(file_path, source_folder)
+                
+                # Verify if the preset file exists
+                if preset_file not in preset_files:
+                    print(f"Preset file '{preset_file}' does not exist.")
+                    continue
+                
+                preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
+                if not os.path.exists(preset_path):
+                    print(f"Preset file '{preset_file}' not found.")
+                    continue
+
+                # Prepare the output file path (same filename as input, but in destination folder)
+                output_file = os.path.join(destination_folder, filename)
+                print(f"Processing: {filename}")
+
+                # Call HandBrakeCLI to encode the video with the selected preset
+                if encode_video(file_path, output_file, preset_path):
+                    # After encoding, check file sizes and handle accordingly
+                    handle_file(file_path, output_file, source_folder)
+                else:
+                    # If encoding fails, handle the error by moving the file to 'errored'
+                    handle_encoding_error(file_path, source_folder)
 
 def main():
     # Scan the script directory for all .json files, excluding 'files_to_process.json'
@@ -82,23 +108,6 @@ def main():
         print("No preset files found in the script directory.")
         return
 
-    # Display preset options to the user
-    print("Available presets:")
-    for index, preset_file in enumerate(preset_files, 1):
-        print(f"{index}: {preset_file}")
-
-    # Prompt the user to select a preset
-    preset_choice = input(f"Select a preset by number (1-{len(preset_files)}): ")
-    
-    # Check if the user input is valid
-    if not preset_choice.isdigit() or int(preset_choice) < 1 or int(preset_choice) > len(preset_files):
-        print("Invalid choice. Exiting.")
-        return
-
-    # Get the selected preset file
-    preset_file = preset_files[int(preset_choice) - 1]
-    preset_path = os.path.join(script_directory, preset_file)
-
     # Ask the user for source and destination folders
     source_folder = input("Enter the source folder path: ")
     destination_folder = input("Enter the destination folder path: ")
@@ -108,13 +117,8 @@ def main():
         print("Source folder does not exist.")
         return
 
-    # Check if the preset file exists
-    if not os.path.exists(preset_path):
-        print(f"Preset file '{preset_file}' does not exist.")
-        return
-
     # Process the files in the source folder
-    process_folder(source_folder, destination_folder, preset_path)
+    process_folder(source_folder, destination_folder, preset_files)
 
 if __name__ == "__main__":
     main()
