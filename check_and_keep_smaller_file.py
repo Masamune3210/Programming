@@ -1,5 +1,6 @@
 import os
 import shutil
+import errno
 
 def get_user_input(prompt):
     while True:
@@ -26,24 +27,33 @@ def compare_and_keep_smaller(source_dir, dest_dir):
                 continue
             
             if os.path.exists(dest_path):
-                source_size = os.path.getsize(source_path)
-                dest_size = os.path.getsize(dest_path)
+                try:
+                    source_size = os.path.getsize(source_path)
+                    dest_size = os.path.getsize(dest_path)
+                    
+                    # Print sizes of both files
+                    print(f"Source file size: {source_size} bytes")
+                    print(f"Destin file size: {dest_size} bytes")
+                    
+                    if source_size < dest_size:
+                        print(f"Destination file is larger: {dest_path} (deleting it and moving source to retag folder)")
+                        shutil.move(source_path, os.path.join(retag_dir, file))  # Move the source file to retag
+                        os.remove(dest_path)  # Remove the larger destination file
+                    elif source_size > dest_size:
+                        print(f"Source file is larger: {source_path} (deleting the source file and leaving destination file)")
+                        os.remove(source_path)  # Remove the larger source file
+                    else:
+                        print(f"Source and destination files are of the same size: {source_path} (moving source to retag folder)")
+                        shutil.move(source_path, os.path.join(retag_dir, file))  # Move the source file to retag folder
+                        os.remove(dest_path)  # Remove the destination file
                 
-                # Print sizes of both files
-                print(f"Source file size: {source_size} bytes")
-                print(f"Destin file size: {dest_size} bytes")
-                
-                if source_size < dest_size:
-                    print(f"Destination file is larger: {dest_path} (deleting it and moving source to retag folder)")
-                    shutil.move(source_path, os.path.join(retag_dir, file))  # Move the source file to retag
-                    os.remove(dest_path)  # Remove the larger destination file
-                elif source_size > dest_size:
-                    print(f"Source file is larger: {source_path} (deleting the source file and leaving destination file)")
-                    os.remove(source_path)  # Remove the larger source file
-                else:
-                    print(f"Source and destination files are of the same size: {source_path} (moving source to retag folder)")
-                    shutil.move(source_path, os.path.join(retag_dir, file))  # Move the source file to retag folder
-                    os.remove(dest_path)  # Remove the destination file
+                except OSError as e:
+                    # Check for file lock (error code 13 is a common lock error)
+                    if e.errno == errno.EACCES or e.errno == errno.EBUSY:
+                        print(f"File is locked, skipping: {source_path}")
+                    else:
+                        # Any other OSError should be raised again
+                        raise e
 
 def main():
     source_dir = get_user_input("Enter the source directory: ")
