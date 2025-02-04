@@ -104,15 +104,17 @@ def handle_file(input_file, output_file, source_folder):
         input_size = os.path.getsize(input_file)
         output_size = os.path.getsize(output_file)
 
+        print(f"Size Check - Input: {input_size / (1024 * 1024):.2f} MB | Output: {output_size / (1024 * 1024):.2f} MB")
+
         if output_size < input_size:
             os.remove(input_file)
-            print(f"Deleted input file {input_file} (output is smaller).")
+            print(f"✅ Deleted input file {input_file} (output is smaller).")
         else:
             os.remove(output_file)
             retag_folder = os.path.join(source_folder, "retag")
             os.makedirs(retag_folder, exist_ok=True)
             shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
-            print(f"Output is not smaller. Moved {input_file} to 'retag' folder.")
+            print(f"⚠️ Output is not smaller. Moved {input_file} to 'retag' folder for review.")
 
 def handle_encoding_error(input_file, source_folder):
     errored_folder = os.path.join(source_folder, "errored")
