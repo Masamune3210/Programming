@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import sys
 
 def encode_video(input_file, output_file, preset_file):
     # Command to run HandBrakeCLI
@@ -79,13 +80,13 @@ def process_folder(source_folder, destination_folder, preset_files):
                 
                 # Verify if the preset file exists
                 if preset_file not in preset_files:
-                    print(f"Preset file '{preset_file}' does not exist.")
-                    continue
+                    print(f"Preset file '{preset_file}' not found. Exiting.")
+                    sys.exit(1)  # Halt the script if the preset file is not found
                 
                 preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
                 if not os.path.exists(preset_path):
-                    print(f"Preset file '{preset_file}' not found.")
-                    continue
+                    print(f"Preset file '{preset_file}' does not exist. Exiting.")
+                    sys.exit(1)  # Halt the script if the preset file doesn't exist
 
                 # Prepare the output file path (same filename as input, but in destination folder)
                 output_file = os.path.join(destination_folder, filename)
@@ -105,8 +106,8 @@ def main():
     preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json') and f != 'files_to_process.json']
 
     if not preset_files:
-        print("No preset files found in the script directory.")
-        return
+        print("No preset files found in the script directory. Exiting.")
+        sys.exit(1)  # Halt the script if no preset files are found
 
     # Ask the user for source and destination folders
     source_folder = input("Enter the source folder path: ")
@@ -114,8 +115,8 @@ def main():
 
     # Check if the source folder exists
     if not os.path.exists(source_folder):
-        print("Source folder does not exist.")
-        return
+        print("Source folder does not exist. Exiting.")
+        sys.exit(1)  # Halt the script if the source folder does not exist
 
     # Process the files in the source folder
     process_folder(source_folder, destination_folder, preset_files)
