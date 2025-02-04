@@ -28,8 +28,8 @@ def encode_video(input_file, output_file, preset_file, handbrakecli_path):
         "-o", output_file,                    # Output file
     ]
     try:
-        # Running the HandBrakeCLI command
-        subprocess.run(command, check=True)
+        # Running the HandBrakeCLI command, redirecting stdout and stderr to DEVNULL
+        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         print(f"Encoding complete: {output_file}")
     except subprocess.CalledProcessError as e:
         print(f"Error encoding video {input_file}: {e}")
