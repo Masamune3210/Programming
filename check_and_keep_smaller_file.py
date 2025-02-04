@@ -29,6 +29,10 @@ def compare_and_keep_smaller(source_dir, dest_dir):
                 source_size = os.path.getsize(source_path)
                 dest_size = os.path.getsize(dest_path)
                 
+                # Print sizes of both files
+                print(f"Source file: {source_path} size: {source_size} bytes")
+                print(f"Destination file: {dest_path} size: {dest_size} bytes")
+                
                 if source_size < dest_size:
                     print(f"Destination file is larger: {dest_path} (deleting it and moving source to retag folder)")
                     shutil.move(source_path, os.path.join(retag_dir, file))  # Move the source file to retag
