@@ -1,167 +1,188 @@
 import os
-import subprocess
-import shutil
 import sys
 import signal
-from tqdm import tqdm  # Import tqdm for progress bar
+import subprocess
+import shutil
+import psutil  # For force killing HandBrakeCLI if needed
+import re
+from tqdm import tqdm
 
-# Store the currently processed file globally so we can clean it up in case of interruption
 current_output_file = None
+current_process = None  # Track HandBrakeCLI process
 
 def find_handbrakecli():
     handbrakecli_path = r"C:\Tools\handbrakecli"
     if not os.path.exists(handbrakecli_path):
-        handbrakecli_path = input("HandBrakeCLI not found at default location. Please provide the full path to HandBrakeCLI: ")
+        handbrakecli_path = input("HandBrakeCLI not found at default location. Please provide the full path: ")
         if not os.path.exists(handbrakecli_path):
-            print("HandBrakeCLI not found at the provided path. Exiting.")
+            print("HandBrakeCLI not found. Exiting.")
             sys.exit(1)
     return handbrakecli_path
 
-def encode_video(input_file, output_file, preset_file, handbrakecli_path):
-    global current_output_file
-    current_output_file = output_file  # Set the global variable to the current output file
-
-    # Command to run HandBrakeCLI
-    command = [
-        os.path.join(handbrakecli_path, "HandBrakeCLI.exe"),  # Path to HandBrakeCLI executable
-        "--preset-import-file", preset_file,  # Import the selected preset file
-        "-i", input_file,                     # Input file
-        "-o", output_file,                    # Output file
-    ]
+def kill_process(process):
+    #Forcefully kill a process and its children.
+    if process is None:
+        return
+    
     try:
-        # Running the HandBrakeCLI command, redirecting stdout and stderr to DEVNULL
-        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc = psutil.Process(process.pid)
+        for child in proc.children(recursive=True):
+            child.kill()
+        proc.kill()
+        proc.wait(5)
+        print(f"Forcefully killed HandBrakeCLI (PID: {process.pid})")
+    except psutil.NoSuchProcess:
+        print("HandBrakeCLI process already terminated.")
+    except Exception as e:
+        print(f"Error killing HandBrakeCLI: {e}")
+
+def cleanup_on_exit(signal, frame):
+    """Cleanup function for interruptions."""
+    global current_output_file, current_process
+    print("\nProcess interrupted. Cleaning up...")
+
+    if current_process:
+        print(f"Attempting to terminate HandBrakeCLI (PID: {current_process.pid})...")
+        try:
+            current_process.terminate()
+            current_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            print("Process did not terminate in time. Forcing kill...")
+            kill_process(current_process)
+
+    if current_output_file and os.path.exists(current_output_file):
+        try:
+            os.remove(current_output_file)
+            print(f"Deleted partially encoded file: {current_output_file}")
+        except Exception as e:
+            print(f"Error deleting partial file: {e}")
+
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, cleanup_on_exit)
+
+def parse_progress(line):
+    """Extracts encoding progress from HandBrakeCLI output."""
+    match = re.search(r'Encoding: task \d+ of \d+, (\d+\.\d+) %', line)
+    return float(match.group(1)) if match else None
+
+def encode_video(input_file, output_file, preset_file, handbrakecli_path):
+    global current_output_file, current_process
+    current_output_file = output_file
+
+    command = [
+        os.path.join(handbrakecli_path, "HandBrakeCLI.exe"),
+        "--preset-import-file", preset_file,
+        "-i", input_file,
+        "-o", output_file,
+    ]
+
+    try:
+        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1) as process:
+            current_process = process
+            progress_bar = tqdm(total=100, unit="%", desc="Encoding Progress", ncols=80)
+
+            for line in process.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+
+                progress = parse_progress(line)
+                if progress is not None:
+                    progress_bar.n = progress
+                    progress_bar.refresh()
+
+            progress_bar.close()
+
+            process.wait()
+
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, command)
+
         print(f"Encoding complete: {output_file}")
+        return True
+
     except subprocess.CalledProcessError as e:
         print(f"Error encoding video {input_file}: {e}")
         return False
-    return True
 
 def handle_file(input_file, output_file, source_folder):
-    # Get sizes of both files
-    input_size = os.path.getsize(input_file)
-    output_size = os.path.getsize(output_file)
+    if os.path.exists(output_file):
+        input_size = os.path.getsize(input_file)
+        output_size = os.path.getsize(output_file)
 
-    # Check if the output file is smaller than the input file
-    if output_size < input_size:
-        # If the output is smaller, delete the input file
-        os.remove(input_file)
-        print(f"Input file {input_file} was larger, deleted.")
-    else:
-        # If the output is not smaller, delete the output and move input to retag folder
-        os.remove(output_file)
-        retag_folder = os.path.join(source_folder, "retag")
-        if not os.path.exists(retag_folder):
-            os.makedirs(retag_folder)
-        # Move the original file to the 'retag' folder
-        shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
-        print(f"Output file is not smaller. Moved input file to 'retag' folder.")
+        if output_size < input_size:
+            os.remove(input_file)
+            print(f"Deleted input file {input_file} (output is smaller).")
+        else:
+            os.remove(output_file)
+            retag_folder = os.path.join(source_folder, "retag")
+            os.makedirs(retag_folder, exist_ok=True)
+            shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
+            print(f"Output is not smaller. Moved {input_file} to 'retag' folder.")
 
 def handle_encoding_error(input_file, source_folder):
-    # Create the 'errored' folder if it doesn't exist
     errored_folder = os.path.join(source_folder, "errored")
-    if not os.path.exists(errored_folder):
-        os.makedirs(errored_folder)
-
-    # Move the source file to the 'errored' folder
+    os.makedirs(errored_folder, exist_ok=True)
     shutil.move(input_file, os.path.join(errored_folder, os.path.basename(input_file)))
-    print(f"Encoding error occurred. Moved {input_file} to 'errored' folder.")
+    print(f"Encoding error. Moved {input_file} to 'errored' folder.")
 
 def get_preset_for_file(file_path, source_folder):
-    # Determine the preset based on the directory structure
     relative_path = os.path.relpath(file_path, source_folder)
-    folder_name = os.path.dirname(relative_path)
+    folder_name = os.path.dirname(relative_path).lower()
 
-    if folder_name.lower() == "kids":
+    if folder_name == "kids":
         return "kids.json"
-    elif folder_name.lower() == "2160":
+    elif folder_name == "2160":
         return "4k.json"
     else:
         return "1080.json"
 
 def process_folder(source_folder, destination_folder, preset_files, handbrakecli_path):
-    # Ensure the destination folder exists
-    if not os.path.exists(destination_folder):
-        os.makedirs(destination_folder)
+    os.makedirs(destination_folder, exist_ok=True)
 
-    # Get all video files to process
-    files_to_process = []
     for root, dirs, files in os.walk(source_folder):
-        # Skip the 'more' folder
-        if 'more' in dirs:
-            dirs.remove('more')
-        if 'retag' in dirs:
-            dirs.remove('retag')
+        for d in ["more", "retag"]:
+            if d in dirs:
+                dirs.remove(d)
 
         for filename in files:
-            file_path = os.path.join(root, filename)
-
-            # Check if it's a video file (basic check for common extensions)
             if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
-                files_to_process.append(file_path)
+                file_path = os.path.join(root, filename)
+                preset_file = get_preset_for_file(file_path, source_folder)
 
-    # Use tqdm to show the progress bar
-    for file_path in tqdm(files_to_process, desc="Processing files", unit="file"):
-        filename = os.path.basename(file_path)
-        
-        # Determine which preset to use based on folder name
-        preset_file = get_preset_for_file(file_path, source_folder)
-        
-        # Verify if the preset file exists
-        if preset_file not in preset_files:
-            print(f"Preset file '{preset_file}' not found. Exiting.")
-            sys.exit(1)  # Halt the script if the preset file is not found
-        
-        preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
-        if not os.path.exists(preset_path):
-            print(f"Preset file '{preset_file}' does not exist. Exiting.")
-            sys.exit(1)  # Halt the script if the preset file doesn't exist
+                if preset_file not in preset_files:
+                    print(f"Preset file '{preset_file}' not found. Exiting.")
+                    sys.exit(1)
 
-        # Prepare the output file path (same filename as input, but in destination folder)
-        output_file = os.path.join(destination_folder, filename)
-        print(f"\nProcessing: {filename}")
+                preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
+                if not os.path.exists(preset_path):
+                    print(f"Preset file '{preset_file}' does not exist. Exiting.")
+                    sys.exit(1)
 
-        # Call HandBrakeCLI to encode the video with the selected preset
-        if encode_video(file_path, output_file, preset_path, handbrakecli_path):
-            # After encoding, check file sizes and handle accordingly
-            handle_file(file_path, output_file, source_folder)
-        else:
-            # If encoding fails, handle the error by moving the file to 'errored'
-            handle_encoding_error(file_path, source_folder)
+                output_file = os.path.join(destination_folder, filename)
+                print(f"Processing: {filename}")
 
-def cleanup_on_exit(signal, frame):
-    print("Process interrupted. Cleaning up any partially encoded files.")
-    global current_output_file
-    if current_output_file and os.path.exists(current_output_file):
-        os.remove(current_output_file)
-        print(f"Deleted partially encoded file: {current_output_file}")
-    sys.exit(0)
+                if encode_video(file_path, output_file, preset_path, handbrakecli_path):
+                    handle_file(file_path, output_file, source_folder)
+                else:
+                    handle_encoding_error(file_path, source_folder)
 
 def main():
-    # Register the cleanup function for Ctrl+C
-    signal.signal(signal.SIGINT, cleanup_on_exit)
-
-    # Scan the script directory for all .json files, excluding 'files_to_process.json'
     script_directory = os.path.dirname(os.path.realpath(__file__))
     preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json') and f != 'files_to_process.json']
 
     if not preset_files:
-        print("No preset files found in the script directory. Exiting.")
-        sys.exit(1)  # Halt the script if no preset files are found
+        print("No preset files found. Exiting.")
+        sys.exit(1)
 
-    # Ask the user for source and destination folders
     source_folder = input("Enter the source folder path: ")
     destination_folder = input("Enter the destination folder path: ")
 
-    # Check if the source folder exists
     if not os.path.exists(source_folder):
         print("Source folder does not exist. Exiting.")
-        sys.exit(1)  # Halt the script if the source folder does not exist
+        sys.exit(1)
 
-    # Find HandBrakeCLI path
     handbrakecli_path = find_handbrakecli()
-
-    # Process the files in the source folder
     process_folder(source_folder, destination_folder, preset_files, handbrakecli_path)
 
 if __name__ == "__main__":
