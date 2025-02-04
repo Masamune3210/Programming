@@ -69,9 +69,13 @@ def encode_video(input_file, output_file, preset_file, handbrakecli_path):
     global current_output_file, current_process
     current_output_file = output_file
 
+    # Extract preset name from file (assuming the preset file follows a specific naming convention)
+    preset_name = os.path.splitext(os.path.basename(preset_file))[0]  
+
     command = [
         os.path.join(handbrakecli_path, "HandBrakeCLI.exe"),
         "--preset-import-file", preset_file,
+        "-Z", preset_name,  # Use the preset name from the file
         "-i", input_file,
         "-o", output_file,
     ]
@@ -80,12 +84,16 @@ def encode_video(input_file, output_file, preset_file, handbrakecli_path):
         with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, encoding="utf-8", errors="replace") as process:
             current_process = process
             progress_bar = tqdm(total=100, unit="%", desc="Encoding Progress", ncols=80, dynamic_ncols=True, position=0, leave=True)
+            last_progress = 0
+
             for line in process.stdout:
-                line = line.strip()
+                sys.stdout.write(line)
+                sys.stdout.flush()
+
                 progress = parse_progress(line)
                 if progress is not None:
-                    progress_bar.n = progress  # Set progress bar to exact value
-                    progress_bar.refresh()  # Refresh instead of update to prevent new lines
+                    progress_bar.update(progress - last_progress)
+                    last_progress = progress
 
             progress_bar.close()
             process.wait()
@@ -128,11 +136,11 @@ def get_preset_for_file(file_path, source_folder):
     folder_name = os.path.dirname(relative_path).lower()
 
     if folder_name == "kids":
-        return "kids.json"
+        return "1080p Kids.json"
     elif folder_name == "2160":
-        return "4k.json"
+        return "4k hdr3.json"
     else:
-        return "1080.json"
+        return "1080p4.json"
 
 def process_folder(source_folder, destination_folder, preset_files, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
