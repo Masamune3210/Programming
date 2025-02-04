@@ -36,27 +36,30 @@ def process_folder(source_folder, destination_folder, preset_file):
             encode_video(file_path, output_file, preset_file)
 
 def main():
-    # List available presets
-    preset_files = {
-        "1": "4k.json",
-        "2": "1080.json",
-        "3": "kids.json"
-    }
+    # Scan the script directory for all .json files
+    script_directory = os.path.dirname(os.path.realpath(__file__))
+    preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json')]
+
+    if not preset_files:
+        print("No preset files found in the script directory.")
+        return
 
     # Display preset options to the user
     print("Available presets:")
-    for key, value in preset_files.items():
-        print(f"{key}: {value}")
+    for index, preset_file in enumerate(preset_files, 1):
+        print(f"{index}: {preset_file}")
 
     # Prompt the user to select a preset
-    preset_choice = input("Select a preset by number (1, 2, or 3): ")
-    if preset_choice not in preset_files:
+    preset_choice = input(f"Select a preset by number (1-{len(preset_files)}): ")
+    
+    # Check if the user input is valid
+    if not preset_choice.isdigit() or int(preset_choice) < 1 or int(preset_choice) > len(preset_files):
         print("Invalid choice. Exiting.")
         return
 
     # Get the selected preset file
-    preset_file = preset_files[preset_choice]
-    preset_path = os.path.join(os.getcwd(), preset_file)  # Assuming the script is in the same directory as the presets
+    preset_file = preset_files[int(preset_choice) - 1]
+    preset_path = os.path.join(script_directory, preset_file)
 
     # Ask the user for source and destination folders
     source_folder = input("Enter the source folder path: ")
