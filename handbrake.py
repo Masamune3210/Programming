@@ -176,6 +176,7 @@ def process_folder(source_folder, destination_folder, preset_files, handbrakecli
 
         output_file = os.path.join(destination_folder, filename)
         print(f"\nProcessing: {filename}")
+        print(f"\nUsing preset: {preset_file}")
 
         if encode_video(file_path, output_file, preset_path, handbrakecli_path):
             handle_file(file_path, output_file, source_folder)
