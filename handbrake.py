@@ -70,6 +70,10 @@ def process_folder(source_folder, destination_folder, preset_files):
 
     # Walk through the source folder recursively
     for root, dirs, files in os.walk(source_folder):
+        # Skip the 'more' folder
+        if 'more' in dirs:
+            dirs.remove('more')
+
         for filename in files:
             file_path = os.path.join(root, filename)
 
