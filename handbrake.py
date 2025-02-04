@@ -15,12 +15,11 @@ def find_handbrakecli():
 def encode_video(input_file, output_file, preset_file, handbrakecli_path):
     # Command to run HandBrakeCLI
     command = [
-        handbrakecli_path, 
+        os.path.join(handbrakecli_path, "HandBrakeCLI.exe"),  # Path to HandBrakeCLI executable
         "--preset-import-file", preset_file,  # Import the selected preset file
         "-i", input_file,                     # Input file
         "-o", output_file,                    # Output file
     ]
-    
     try:
         # Running the HandBrakeCLI command
         subprocess.run(command, check=True)
