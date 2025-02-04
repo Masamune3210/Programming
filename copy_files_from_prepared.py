@@ -121,13 +121,6 @@ def copy_files(file_list_path, destination_folder):
         if current_file_path and os.path.exists(current_file_path):
             print(f"Deleting partially copied file: {current_file_path}")
             os.remove(current_file_path)
-
-        # Only remove the file entry if the file was copied successfully
-        if current_file_entry:
-            print(f"Removing {current_file_entry['file']} from JSON list.")
-            data["files"].remove(current_file_entry)
-            save_json(file_list_path, data)
-
         save_json(file_list_path, data)
         raise
 
