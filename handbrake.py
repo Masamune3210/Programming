@@ -77,10 +77,11 @@ def encode_video(input_file, output_file, preset_file, handbrakecli_path):
     ]
 
     try:
-        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1) as process:
+        with subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, encoding="utf-8", errors="replace") as process:
             current_process = process
             progress_bar = tqdm(total=100, unit="%", desc="Encoding Progress", ncols=80, dynamic_ncols=True, position=0, leave=True)
             for line in process.stdout:
+                line = line.strip()
                 progress = parse_progress(line)
                 if progress is not None:
                     progress_bar.n = progress  # Set progress bar to exact value
