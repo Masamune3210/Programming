@@ -3,6 +3,7 @@ import subprocess
 import shutil
 import sys
 import signal
+from tqdm import tqdm  # Import tqdm for progress bar
 
 # Store the currently processed file globally so we can clean it up in case of interruption
 current_output_file = None
@@ -83,7 +84,8 @@ def process_folder(source_folder, destination_folder, preset_files, handbrakecli
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
 
-    # Walk through the source folder recursively
+    # Get all video files to process
+    files_to_process = []
     for root, dirs, files in os.walk(source_folder):
         # Skip the 'more' folder
         if 'more' in dirs:
@@ -96,30 +98,36 @@ def process_folder(source_folder, destination_folder, preset_files, handbrakecli
 
             # Check if it's a video file (basic check for common extensions)
             if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
-                # Determine which preset to use based on folder name
-                preset_file = get_preset_for_file(file_path, source_folder)
-                
-                # Verify if the preset file exists
-                if preset_file not in preset_files:
-                    print(f"Preset file '{preset_file}' not found. Exiting.")
-                    sys.exit(1)  # Halt the script if the preset file is not found
-                
-                preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
-                if not os.path.exists(preset_path):
-                    print(f"Preset file '{preset_file}' does not exist. Exiting.")
-                    sys.exit(1)  # Halt the script if the preset file doesn't exist
+                files_to_process.append(file_path)
 
-                # Prepare the output file path (same filename as input, but in destination folder)
-                output_file = os.path.join(destination_folder, filename)
-                print(f"Processing: {filename}")
+    # Use tqdm to show the progress bar
+    for file_path in tqdm(files_to_process, desc="Processing files", unit="file"):
+        filename = os.path.basename(file_path)
+        
+        # Determine which preset to use based on folder name
+        preset_file = get_preset_for_file(file_path, source_folder)
+        
+        # Verify if the preset file exists
+        if preset_file not in preset_files:
+            print(f"Preset file '{preset_file}' not found. Exiting.")
+            sys.exit(1)  # Halt the script if the preset file is not found
+        
+        preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
+        if not os.path.exists(preset_path):
+            print(f"Preset file '{preset_file}' does not exist. Exiting.")
+            sys.exit(1)  # Halt the script if the preset file doesn't exist
 
-                # Call HandBrakeCLI to encode the video with the selected preset
-                if encode_video(file_path, output_file, preset_path, handbrakecli_path):
-                    # After encoding, check file sizes and handle accordingly
-                    handle_file(file_path, output_file, source_folder)
-                else:
-                    # If encoding fails, handle the error by moving the file to 'errored'
-                    handle_encoding_error(file_path, source_folder)
+        # Prepare the output file path (same filename as input, but in destination folder)
+        output_file = os.path.join(destination_folder, filename)
+        print(f"\nProcessing: {filename}")
+
+        # Call HandBrakeCLI to encode the video with the selected preset
+        if encode_video(file_path, output_file, preset_path, handbrakecli_path):
+            # After encoding, check file sizes and handle accordingly
+            handle_file(file_path, output_file, source_folder)
+        else:
+            # If encoding fails, handle the error by moving the file to 'errored'
+            handle_encoding_error(file_path, source_folder)
 
 def cleanup_on_exit(signal, frame):
     print("Process interrupted. Cleaning up any partially encoded files.")
