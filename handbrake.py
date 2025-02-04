@@ -73,6 +73,8 @@ def process_folder(source_folder, destination_folder, preset_files):
         # Skip the 'more' folder
         if 'more' in dirs:
             dirs.remove('more')
+        if 'retag' in dirs:
+            dirs.remove('retag')
 
         for filename in files:
             file_path = os.path.join(root, filename)
