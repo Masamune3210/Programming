@@ -2,6 +2,10 @@ import os
 import subprocess
 import shutil
 import sys
+import signal
+
+# Store the currently processed file globally so we can clean it up in case of interruption
+current_output_file = None
 
 def find_handbrakecli():
     handbrakecli_path = r"C:\Tools\handbrakecli"
@@ -13,6 +17,9 @@ def find_handbrakecli():
     return handbrakecli_path
 
 def encode_video(input_file, output_file, preset_file, handbrakecli_path):
+    global current_output_file
+    current_output_file = output_file  # Set the global variable to the current output file
+
     # Command to run HandBrakeCLI
     command = [
         os.path.join(handbrakecli_path, "HandBrakeCLI.exe"),  # Path to HandBrakeCLI executable
@@ -114,7 +121,18 @@ def process_folder(source_folder, destination_folder, preset_files, handbrakecli
                     # If encoding fails, handle the error by moving the file to 'errored'
                     handle_encoding_error(file_path, source_folder)
 
+def cleanup_on_exit(signal, frame):
+    print("Process interrupted. Cleaning up any partially encoded files.")
+    global current_output_file
+    if current_output_file and os.path.exists(current_output_file):
+        os.remove(current_output_file)
+        print(f"Deleted partially encoded file: {current_output_file}")
+    sys.exit(0)
+
 def main():
+    # Register the cleanup function for Ctrl+C
+    signal.signal(signal.SIGINT, cleanup_on_exit)
+
     # Scan the script directory for all .json files, excluding 'files_to_process.json'
     script_directory = os.path.dirname(os.path.realpath(__file__))
     preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json') and f != 'files_to_process.json']
