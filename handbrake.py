@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shutil
 
 def encode_video(input_file, output_file, preset_file):
     # Command to run HandBrakeCLI
@@ -16,6 +17,28 @@ def encode_video(input_file, output_file, preset_file):
         print(f"Encoding complete: {output_file}")
     except subprocess.CalledProcessError as e:
         print(f"Error encoding video: {e}")
+        return False
+    return True
+
+def handle_file(input_file, output_file, source_folder):
+    # Get sizes of both files
+    input_size = os.path.getsize(input_file)
+    output_size = os.path.getsize(output_file)
+
+    # Check if the output file is smaller than the input file
+    if output_size < input_size:
+        # If the output is smaller, delete the input file
+        os.remove(input_file)
+        print(f"Input file {input_file} was larger, deleted.")
+    else:
+        # If the output is not smaller, delete the output and move input to retag folder
+        os.remove(output_file)
+        retag_folder = os.path.join(source_folder, "retag")
+        if not os.path.exists(retag_folder):
+            os.makedirs(retag_folder)
+        # Move the original file to the 'retag' folder
+        shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
+        print(f"Output file is not smaller. Moved input file to 'retag' folder.")
 
 def process_folder(source_folder, destination_folder, preset_file):
     # Ensure the destination folder exists
@@ -33,10 +56,12 @@ def process_folder(source_folder, destination_folder, preset_file):
             print(f"Processing: {filename}")
             
             # Call HandBrakeCLI to encode the video with the selected preset
-            encode_video(file_path, output_file, preset_file)
+            if encode_video(file_path, output_file, preset_file):
+                # After encoding, check file sizes and handle accordingly
+                handle_file(file_path, output_file, source_folder)
 
 def main():
-    # Scan the script directory for all .json files
+    # Scan the script directory for all .json files, excluding 'files_to_process.json'
     script_directory = os.path.dirname(os.path.realpath(__file__))
     preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json') and f != 'files_to_process.json']
 
