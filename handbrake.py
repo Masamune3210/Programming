@@ -38,7 +38,7 @@ def process_folder(source_folder, destination_folder, preset_file):
 def main():
     # Scan the script directory for all .json files
     script_directory = os.path.dirname(os.path.realpath(__file__))
-    preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json')]
+    preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json') and f != 'files_to_process.json']
 
     if not preset_files:
         print("No preset files found in the script directory.")
