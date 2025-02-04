@@ -3,10 +3,19 @@ import subprocess
 import shutil
 import sys
 
-def encode_video(input_file, output_file, preset_file):
+def find_handbrakecli():
+    handbrakecli_path = r"C:\Tools\handbrakecli"
+    if not os.path.exists(handbrakecli_path):
+        handbrakecli_path = input("HandBrakeCLI not found at default location. Please provide the full path to HandBrakeCLI: ")
+        if not os.path.exists(handbrakecli_path):
+            print("HandBrakeCLI not found at the provided path. Exiting.")
+            sys.exit(1)
+    return handbrakecli_path
+
+def encode_video(input_file, output_file, preset_file, handbrakecli_path):
     # Command to run HandBrakeCLI
     command = [
-        "HandBrakeCLI", 
+        handbrakecli_path, 
         "--preset-import-file", preset_file,  # Import the selected preset file
         "-i", input_file,                     # Input file
         "-o", output_file,                    # Output file
@@ -63,7 +72,7 @@ def get_preset_for_file(file_path, source_folder):
     else:
         return "1080.json"
 
-def process_folder(source_folder, destination_folder, preset_files):
+def process_folder(source_folder, destination_folder, preset_files, handbrakecli_path):
     # Ensure the destination folder exists
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
@@ -99,7 +108,7 @@ def process_folder(source_folder, destination_folder, preset_files):
                 print(f"Processing: {filename}")
 
                 # Call HandBrakeCLI to encode the video with the selected preset
-                if encode_video(file_path, output_file, preset_path):
+                if encode_video(file_path, output_file, preset_path, handbrakecli_path):
                     # After encoding, check file sizes and handle accordingly
                     handle_file(file_path, output_file, source_folder)
                 else:
@@ -124,8 +133,11 @@ def main():
         print("Source folder does not exist. Exiting.")
         sys.exit(1)  # Halt the script if the source folder does not exist
 
+    # Find HandBrakeCLI path
+    handbrakecli_path = find_handbrakecli()
+
     # Process the files in the source folder
-    process_folder(source_folder, destination_folder, preset_files)
+    process_folder(source_folder, destination_folder, preset_files, handbrakecli_path)
 
 if __name__ == "__main__":
     main()
