@@ -84,9 +84,7 @@ def encode_video(input_file, output_file, preset_name, handbrakecli_path):
             last_progress = 0
 
             for line in process.stdout:
-                sys.stdout.write(line)
-                sys.stdout.flush()
-
+                # We suppress output except for progress updates
                 progress = parse_progress(line)
                 if progress is not None:
                     progress_bar.update(progress - last_progress)
@@ -142,7 +140,6 @@ def get_preset_for_file(file_path, source_folder):
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
 
-    # Collect all files first to determine total count
     all_files = []
     for root, dirs, files in os.walk(source_folder):
         for d in ["more", "retag"]:
@@ -158,8 +155,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
         print("No files found to process. Exiting.")
         return
 
-    # Create progress bar for file processing
-    file_progress = tqdm(total=total_files, desc="Total Progress", unit="file", ncols=80, dynamic_ncols=True, position=0, leave=True)
+    file_progress = tqdm(total=len(all_files), desc="Total Progress", unit="file", ncols=80, dynamic_ncols=True, position=0, leave=True)
 
     for file_path in all_files:
         filename = os.path.basename(file_path)
