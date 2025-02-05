@@ -36,6 +36,15 @@ def delete_partial_file(file_path):
         except Exception as e:
             logging.error(f"Error deleting partial file {file_path}: {e}")
 
+def copy_file_with_progress(src, dst):
+    """Copy a file and show a progress bar for the current file copy."""
+    total_size = os.path.getsize(src)
+    with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
+        with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Copying {os.path.basename(src)}") as pbar:
+            while (chunk := fsrc.read(1024 * 1024)):  # 1MB chunks
+                fdst.write(chunk)
+                pbar.update(len(chunk))
+
 def copy_files(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
     try:
@@ -112,7 +121,7 @@ def copy_files(file_list_path, destination_folder):
                     try:
                         print(f"\nCopying: {file_name} → {dest_path}")
                         current_file_path = dest_path  # Store the current destination path of the file being copied
-                        shutil.copy2(file_path, dest_path)
+                        copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
                         # If copy was successful, remove the file from the remaining list
                         remaining_files.remove(file_entry)
                         processed_count += 1
