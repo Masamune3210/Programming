@@ -142,7 +142,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
 
     all_files = []
     for root, dirs, files in os.walk(source_folder):
-        for d in ["more", "retag"]:
+        for d in ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored"]:
             if d in dirs:
                 dirs.remove(d)
         
