@@ -139,7 +139,7 @@ def get_preset_for_file(file_path, source_folder):
     else:
         return "1080p4"
 
-def process_folder(source_folder, destination_folder, preset_files, handbrakecli_path):
+def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
 
     # Collect all files first to determine total count
@@ -163,47 +163,28 @@ def process_folder(source_folder, destination_folder, preset_files, handbrakecli
 
     for file_path in all_files:
         filename = os.path.basename(file_path)
-        preset_file = get_preset_for_file(file_path, source_folder)
-
-        if preset_file not in preset_files:
-            print(f"Preset file '{preset_file}' not found. Exiting.")
-            sys.exit(1)
-
-        preset_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), preset_file)
-        if not os.path.exists(preset_path):
-            print(f"Preset file '{preset_file}' does not exist. Exiting.")
-            sys.exit(1)
-
+        preset_name = get_preset_for_file(file_path, source_folder)
         output_file = os.path.join(destination_folder, filename)
         print(f"\nProcessing: {filename}")
-        print(f"\nUsing preset: {preset_file}")
 
-        if encode_video(file_path, output_file, preset_path, handbrakecli_path):
+        if encode_video(file_path, output_file, preset_name, handbrakecli_path):
             handle_file(file_path, output_file, source_folder)
         else:
             handle_encoding_error(file_path, source_folder)
 
-        file_progress.update(1)  # Update file progress bar
+        file_progress.update(1)
 
     file_progress.close()
 
 def main():
-    script_directory = os.path.dirname(os.path.realpath(__file__))
-    preset_files = [f for f in os.listdir(script_directory) if f.endswith('.json') and f != 'files_to_process.json']
-
-    if not preset_files:
-        print("No preset files found. Exiting.")
-        sys.exit(1)
-
     source_folder = input("Enter the source folder path: ")
     destination_folder = input("Enter the destination folder path: ")
-
     if not os.path.exists(source_folder):
         print("Source folder does not exist. Exiting.")
         sys.exit(1)
 
     handbrakecli_path = find_handbrakecli()
-    process_folder(source_folder, destination_folder, preset_files, handbrakecli_path)
+    process_folder(source_folder, destination_folder, handbrakecli_path)
 
 if __name__ == "__main__":
     main()
