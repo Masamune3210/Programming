@@ -52,7 +52,7 @@ def main():
             continue
         file_encoder = file_encoder_map.get(file, None)
         file_extension = file.lower().split('.')[-1]
-        if file_extension != "mp3" or (selected_encoder != "any" and file_encoder and file_encoder.strip().lower() != selected_encoder):
+        if file_extension == "mkv" or (selected_encoder != "any" and file_encoder and file_encoder.strip().lower() != selected_encoder):
             file_size = os.path.getsize(file)  # Get the file size in bytes
             files_to_process.append({"file": file, "size": file_size})
     

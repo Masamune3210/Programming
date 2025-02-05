@@ -161,7 +161,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
         output_file = os.path.join(destination_folder, filename)
-        print(f"\nProcessing: {filename} - {preset_name}")
+        print(f"\nProcessing: {filename}")
 
         if encode_video(file_path, output_file, preset_name, handbrakecli_path):
             handle_file(file_path, output_file, source_folder)
