@@ -31,8 +31,8 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             for file in files:
                 all_files.append(os.path.join(root, file))
 
-        source_files = [file for file in all_files if file.lower().endswith(('.mkv', '.webm', '.avi'))]
-        unsupported_files.extend([file for file in all_files if not file.lower().endswith(('.mkv', '.webm', '.avi', '.mp4'))])
+        source_files = [file for file in all_files if file.lower().endswith(('.mkv', '.webm', '.avi', '.mpg'))]
+        unsupported_files.extend([file for file in all_files if not file.lower().endswith(('.mkv', '.webm', '.avi', '.mp4', '.mpg'))])
 
         conversion_made = False
         for file in tqdm(source_files, desc="Converting Files", unit="file"):
