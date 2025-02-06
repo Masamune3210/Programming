@@ -106,6 +106,9 @@ def copy_files(file_list_path, destination_folder):
 
                 if not os.path.exists(file_path):
                     print(f"\nSkipping (not found): {file_path}")
+                    remaining_files.remove(file_entry)  # Remove from processing list
+                    data["files"] = remaining_files  # Update JSON data
+                    save_json(file_list_path, data)  # Save changes immediately
                     continue
 
                 if "2160" in file_name:
