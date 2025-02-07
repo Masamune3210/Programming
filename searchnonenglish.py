@@ -3,7 +3,23 @@ import json
 import subprocess
 from tqdm import tqdm
 
-LOG_FILE = "non_english_audio.log"
+LOG_FILE = "non_english_audio.json"
+
+def load_existing_log():
+    """Loads the existing JSON log file if it exists, otherwise returns an empty structure."""
+    if os.path.exists(LOG_FILE):
+        try:
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError):
+            return {"files": []}
+    return {"files": []}
+
+def save_log(log_data):
+    """Writes and flushes the log data to the JSON file."""
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(log_data, f, indent=4)
+        f.flush()
 
 def get_audio_languages(file_path):
     """Runs ffprobe to get the language of audio tracks in a media file."""
@@ -35,7 +51,8 @@ def get_audio_languages(file_path):
 
 def scan_directory(root_folder):
     """Walks through directories and checks each media file for non-English audio."""
-    non_english_files = set()
+    log_data = load_existing_log()
+    logged_files = {entry["file"] for entry in log_data["files"]}  # Set for quick lookup
     all_files = []
 
     # Collect all media files first for tqdm progress bar
@@ -50,21 +67,27 @@ def scan_directory(root_folder):
 
     current_dir = ""
     try:
-        with open(LOG_FILE, "a", encoding="utf-8") as log_file, tqdm(total=len(all_files), desc="Processing files", unit="file") as pbar:
+        with tqdm(total=len(all_files), desc="Processing files", unit="file") as pbar:
             for file_path in all_files:
                 new_dir = os.path.dirname(file_path)
                 if new_dir != current_dir:
                     current_dir = new_dir
                     tqdm.write(f"Scanning: {current_dir}")  # Print above progress bar
 
+                if file_path in logged_files:
+                    pbar.update(1)
+                    continue  # Skip already logged files
+
                 languages = get_audio_languages(file_path)
                 if languages and "eng" not in languages:
-                    log_entry = f"{file_path} (Languages: {', '.join(languages)})\n"
-                    if log_entry not in non_english_files:
-                        tqdm.write(f"Non-English audio found: {file_path} (Languages: {', '.join(languages)})")
-                        non_english_files.add(log_entry)
-                        log_file.write(log_entry)
-                        log_file.flush()  # Flush to ensure progress is saved
+                    file_size = os.path.getsize(file_path)
+                    log_entry = {"file": file_path, "size": file_size}
+
+                    tqdm.write(f"Non-English audio found: {file_path} (Languages: {', '.join(languages)})")
+                    log_data["files"].append(log_entry)
+                    logged_files.add(file_path)
+
+                    save_log(log_data)  # Save immediately to avoid data loss
 
                 pbar.update(1)  # Update tqdm progress bar
 
