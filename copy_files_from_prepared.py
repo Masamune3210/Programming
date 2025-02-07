@@ -54,6 +54,16 @@ def move_file(src, dst):
     except Exception as e:
         logging.error(f"Error moving {os.path.basename(src)}: {e}")
 
+def move_file_with_progress(src, dst):
+    """Move a file and show a progress bar for the current file move."""
+    total_size = os.path.getsize(src)
+    with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
+        with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Moving {os.path.basename(src)}") as pbar:
+            while (chunk := fsrc.read(1024 * 1024)):  # 1MB chunks
+                fdst.write(chunk)
+                pbar.update(len(chunk))
+    os.remove(src)
+
 def copy_files(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
     try:
@@ -139,7 +149,8 @@ def copy_files(file_list_path, destination_folder):
                     try:
                         if is_non_english_audio:
                             print(f"\nMoving: {file_name} → {dest_path}")
-                            move_file(file_path, dest_path)  # Move files directly
+                            current_file_path = dest_path  # Store the current destination path of the file being moved
+                            move_file_with_progress(file_path, dest_path)  # Move the file with progress bar
                         else:
                             if file_name.lower().endswith('.mp4'):
                                 print(f"\nCopying: {file_name} → {dest_path}")
