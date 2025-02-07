@@ -35,7 +35,7 @@ def get_audio_languages(file_path):
 
 def scan_directory(root_folder):
     """Walks through directories and checks each media file for non-English audio."""
-    non_english_files = []
+    non_english_files = set()
     all_files = []
 
     # Collect all media files first for tqdm progress bar
@@ -49,26 +49,29 @@ def scan_directory(root_folder):
         return
 
     current_dir = ""
-    with tqdm(total=len(all_files), desc="Processing files", unit="file") as pbar:
-        for file_path in all_files:
-            new_dir = os.path.dirname(file_path)
-            if new_dir != current_dir:
-                current_dir = new_dir
-                tqdm.write(f"Scanning: {current_dir}")  # Print above progress bar
+    try:
+        with open(LOG_FILE, "a", encoding="utf-8") as log_file, tqdm(total=len(all_files), desc="Processing files", unit="file") as pbar:
+            for file_path in all_files:
+                new_dir = os.path.dirname(file_path)
+                if new_dir != current_dir:
+                    current_dir = new_dir
+                    tqdm.write(f"Scanning: {current_dir}")  # Print above progress bar
 
-            languages = get_audio_languages(file_path)
-            if languages and "eng" not in languages:
-                tqdm.write(f"Non-English audio found: {file_path} (Languages: {', '.join(languages)})")
-                non_english_files.append(f"{file_path} (Languages: {', '.join(languages)})")
+                languages = get_audio_languages(file_path)
+                if languages and "eng" not in languages:
+                    log_entry = f"{file_path} (Languages: {', '.join(languages)})\n"
+                    if log_entry not in non_english_files:
+                        tqdm.write(f"Non-English audio found: {file_path} (Languages: {', '.join(languages)})")
+                        non_english_files.add(log_entry)
+                        log_file.write(log_entry)
+                        log_file.flush()  # Flush to ensure progress is saved
 
-            pbar.update(1)  # Update tqdm progress bar
+                pbar.update(1)  # Update tqdm progress bar
 
-    if non_english_files:
-        with open(LOG_FILE, "w", encoding="utf-8") as log:
-            log.write("\n".join(non_english_files) + "\n")
-        print(f"\nLogged {len(non_english_files)} files with non-English audio to {LOG_FILE}")
-    else:
-        print("\nNo non-English audio files found.")
+    except KeyboardInterrupt:
+        print("\nScan interrupted by user. Progress has been saved.")
+    except Exception as e:
+        print(f"\nUnexpected error: {e}")
 
 if __name__ == "__main__":
     folder = input("Enter the folder to scan: ").strip()
