@@ -24,6 +24,10 @@ def convert_and_tag_mp4(source_folder, destination_folder):
     failed_tagging_files = []
     failed_conversions = []
 
+    # Create a folder for failed conversions
+    failed_folder = os.path.join(source_folder, "failedconv")
+    os.makedirs(failed_folder, exist_ok=True)
+
     while True:
         # Get a list of all files in the source folder
         all_files = []
@@ -57,9 +61,10 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 ffprobe_result = subprocess.run(ffprobe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
                 if not ffprobe_result.stdout:
-                    print(f"\nError: Verification failed for '{output_file_path}'. Keeping original file.")
+                    print(f"\nError: Verification failed for '{output_file_path}'. Moving original file to 'failedconv'.")
                     failed_conversions.append(file)
-                    os.remove(output_file_path)
+                    os.remove(output_file_path)  # Delete failed conversion
+                    shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))  # Move source file
                     continue
 
                 # If ffprobe is successful, delete the original file
@@ -67,8 +72,9 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 print(f"\nConverted and removed original file: {file}")
                 conversion_made = True
             except subprocess.CalledProcessError:
-                print(f"\nFailed to convert file: {file}")
+                print(f"\nFailed to convert file: {file}. Moving to 'failedconv'.")
                 failed_conversions.append(file)
+                shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
 
         # Restart the loop if any files were converted
         if conversion_made:
@@ -130,7 +136,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             print(file)
 
     if failed_conversions:
-        print("\nThe following files failed verification and were not deleted:")
+        print("\nThe following files failed conversion and were moved to 'failedconv':")
         for file in failed_conversions:
             print(file)
 
