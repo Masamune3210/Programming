@@ -46,10 +46,16 @@ def get_audio_languages(file_path):
         tqdm.write(f"\nInvalid JSON output from ffprobe for {file_path}")
         return set()
 
+def delete_file(file_path):
+    """Deletes the specified file."""
+    try:
+        os.remove(file_path)
+        tqdm.write(f"Deleted: {file_path}")
+    except OSError as e:
+        tqdm.write(f"Error deleting {file_path}: {e}")
+
 def scan_directory(root_folder):
-    """Walks through directories and checks each media file for non-English audio."""
-    log_data = load_existing_log()
-    logged_files = {entry["file"] for entry in log_data["files"]}  # Set for quick lookup
+    """Walks through directories and deletes each media file with non-English audio."""
     all_files = []
 
     # Collect all media files first for tqdm progress bar
@@ -71,10 +77,6 @@ def scan_directory(root_folder):
                     current_dir = new_dir
                     tqdm.write(f"Scanning: {current_dir}")  # Print above progress bar
 
-                if file_path in logged_files:
-                    pbar.update(1)
-                    continue  # Skip already logged files
-
                 languages = get_audio_languages(file_path)
 
                 # Ignore files with only undefined audio
@@ -82,21 +84,14 @@ def scan_directory(root_folder):
                     pbar.update(1)
                     continue
 
-                # Log files that do not contain English audio
+                # Delete files that do not contain English audio
                 if "eng" not in languages:
-                    file_size = os.path.getsize(file_path)
-                    log_entry = {"file": file_path, "size": file_size}
-
-                    tqdm.write(f"Non-English audio found: {file_path} (Languages: {', '.join(languages)})")
-                    log_data["files"].append(log_entry)
-                    logged_files.add(file_path)
-
-                    save_log(log_data)  # Save immediately to avoid data loss
+                    delete_file(file_path)
 
                 pbar.update(1)  # Update tqdm progress bar
 
     except KeyboardInterrupt:
-        print("\nScan interrupted by user. Progress has been saved.")
+        print("\nScan interrupted by user.")
     except Exception as e:
         print(f"\nUnexpected error: {e}")
 
