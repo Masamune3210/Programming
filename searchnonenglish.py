@@ -35,12 +35,9 @@ def get_audio_languages(file_path):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
         streams = json.loads(result.stdout).get("streams", [])
-        
-        languages = set()
-        for stream in streams:
-            lang = stream.get("tags", {}).get("language", "und")  # Default to "und" if not found
-            languages.add(lang)
-        
+
+        languages = {stream.get("tags", {}).get("language", "und") for stream in streams}
+
         return languages
     except subprocess.CalledProcessError as e:
         tqdm.write(f"\nError processing {file_path}: {e}")
@@ -79,7 +76,14 @@ def scan_directory(root_folder):
                     continue  # Skip already logged files
 
                 languages = get_audio_languages(file_path)
-                if languages and "eng" not in languages:
+
+                # Ignore files with only undefined audio
+                if not languages or languages == {"und"}:
+                    pbar.update(1)
+                    continue
+
+                # Log files that do not contain English audio
+                if "eng" not in languages:
                     file_size = os.path.getsize(file_path)
                     log_entry = {"file": file_path, "size": file_size}
 
