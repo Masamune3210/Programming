@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import filedialog
 from tqdm import tqdm  # Add tqdm for progress bar
 import logging
+import sys
 
 # Setup logging
 logging.basicConfig(filename='copy_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -161,7 +162,7 @@ def copy_files(file_list_path, destination_folder):
             if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
                 os.remove('copy_errors.log')
                 print("Deleted empty copy_errors.log file")
-        raise
+                sys.exit(0)
 
     data["files"] = remaining_files
     save_json(file_list_path, data)
