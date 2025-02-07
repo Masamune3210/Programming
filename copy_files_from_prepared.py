@@ -14,7 +14,6 @@ logging.basicConfig(filename='process_errors.log', level=logging.ERROR, format='
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
 RETAG_THRESHOLD = 500 * 1024 * 1024  # 500MB
 
-
 def get_free_space(folder):
     """Return free space available on the drive containing the folder using shutil."""
     disk_usage = shutil.disk_usage(folder)
