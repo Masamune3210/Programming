@@ -45,6 +45,14 @@ def copy_file_with_progress(src, dst):
                 fdst.write(chunk)
                 pbar.update(len(chunk))
 
+def move_file(src, dst):
+    """Move a file directly from source to destination."""
+    try:
+        shutil.move(src, dst)
+        print(f"Moved: {os.path.basename(src)} → {os.path.basename(dst)}")
+    except Exception as e:
+        logging.error(f"Error moving {os.path.basename(src)}: {e}")
+
 def copy_files(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
     try:
@@ -98,7 +106,7 @@ def copy_files(file_list_path, destination_folder):
     current_file_entry = None  # To store the current file entry in the list
 
     try:
-        with tqdm(total=len(eligible_files), desc="Copying files", unit="file") as pbar:
+        with tqdm(total=len(eligible_files), desc="Processing files", unit="file") as pbar:
             for file_entry in eligible_files[:]:
                 file_path = file_entry["file"]
                 file_name = os.path.basename(file_path)
@@ -122,15 +130,20 @@ def copy_files(file_list_path, destination_folder):
                     processed_count += 1
                 else:
                     try:
-                        print(f"\nCopying: {file_name} → {dest_path}")
-                        current_file_path = dest_path  # Store the current destination path of the file being copied
-                        copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
-                        # If copy was successful, remove the file from the remaining list
+                        if file_name.lower().endswith('.mp4'):
+                            print(f"\nCopying: {file_name} → {dest_path}")
+                            current_file_path = dest_path  # Store the current destination path of the file being copied
+                            copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
+                        else:
+                            print(f"\nMoving: {file_name} → {dest_path}")
+                            move_file(file_path, dest_path)  # Move non-MP4 files directly
+
+                        # If copy or move was successful, remove the file from the remaining list
                         remaining_files.remove(file_entry)
                         processed_count += 1
 
                     except Exception as e:
-                        logging.error(f"Error copying {file_name}: {e}")
+                        logging.error(f"Error processing {file_name}: {e}")
                         delete_partial_file(current_file_path)  # Delete the partial file at the current destination
                         continue
 
