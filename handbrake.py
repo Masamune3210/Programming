@@ -147,7 +147,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                 dirs.remove(d)
         
         for filename in files:
-            if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
+            if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.mpg', '.webm')):
                 all_files.append(os.path.join(root, filename))
 
     total_files = len(all_files)
