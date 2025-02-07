@@ -94,11 +94,14 @@ def copy_files(file_list_path, destination_folder):
     print(f"Free space: {free_space / (1024**3):.2f} GB")
     print(f"Space required for {len(eligible_files)} files: {total_space_needed / (1024**3):.2f} GB")
 
-    retag_folder = os.path.join(destination_folder, "retag")
-    os.makedirs(retag_folder, exist_ok=True)
+    # Check if the JSON file is named non_english_audio.json
+    is_non_english_audio = os.path.basename(file_list_path) == "non_english_audio.json"
 
-    twenty_folder = os.path.join(destination_folder, "2160")
-    os.makedirs(twenty_folder, exist_ok=True)
+    if not is_non_english_audio:
+        retag_folder = os.path.join(destination_folder, "retag")
+        os.makedirs(retag_folder, exist_ok=True)
+        twenty_folder = os.path.join(destination_folder, "2160")
+        os.makedirs(twenty_folder, exist_ok=True)
 
     processed_count = 0
     remaining_files = list(files_to_copy)
@@ -120,10 +123,13 @@ def copy_files(file_list_path, destination_folder):
                     save_json(file_list_path, data)  # Save changes immediately
                     continue
 
-                if "2160" in file_name:
-                    dest_path = os.path.join(twenty_folder, file_name)
+                if is_non_english_audio:
+                    dest_path = os.path.join(destination_folder, file_name)
                 else:
-                    dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
+                    if "2160" in file_name:
+                        dest_path = os.path.join(twenty_folder, file_name)
+                    else:
+                        dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
 
                 if os.path.exists(dest_path):
                     print(f"\nAlready exists (treating as copied): {file_name}")
@@ -131,13 +137,17 @@ def copy_files(file_list_path, destination_folder):
                     processed_count += 1
                 else:
                     try:
-                        if file_name.lower().endswith('.mp4'):
-                            print(f"\nCopying: {file_name} → {dest_path}")
-                            current_file_path = dest_path  # Store the current destination path of the file being copied
-                            copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
-                        else:
+                        if is_non_english_audio:
                             print(f"\nMoving: {file_name} → {dest_path}")
-                            move_file(file_path, dest_path)  # Move non-MP4 files directly
+                            move_file(file_path, dest_path)  # Move files directly
+                        else:
+                            if file_name.lower().endswith('.mp4'):
+                                print(f"\nCopying: {file_name} → {dest_path}")
+                                current_file_path = dest_path  # Store the current destination path of the file being copied
+                                copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
+                            else:
+                                print(f"\nMoving: {file_name} → {dest_path}")
+                                move_file(file_path, dest_path)  # Move non-MP4 files directly
 
                         # If copy or move was successful, remove the file from the remaining list
                         remaining_files.remove(file_entry)
