@@ -8,7 +8,7 @@ import logging
 import sys
 
 # Setup logging
-logging.basicConfig(filename='copy_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(filename='process_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Minimum free space required beyond file size (in bytes)
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
@@ -46,14 +46,6 @@ def copy_file_with_progress(src, dst):
                 fdst.write(chunk)
                 pbar.update(len(chunk))
 
-def move_file(src, dst):
-    """Move a file directly from source to destination."""
-    try:
-        shutil.move(src, dst)
-        print(f"Moved: {os.path.basename(src)} → {os.path.basename(dst)}")
-    except Exception as e:
-        logging.error(f"Error moving {os.path.basename(src)}: {e}")
-
 def move_file_with_progress(src, dst):
     """Move a file and show a progress bar for the current file move."""
     total_size = os.path.getsize(src)
@@ -64,7 +56,7 @@ def move_file_with_progress(src, dst):
                 pbar.update(len(chunk))
     os.remove(src)
 
-def copy_files(file_list_path, destination_folder):
+def process_json(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
     try:
         with open(file_list_path, 'r', encoding='utf-8') as f:
@@ -158,7 +150,7 @@ def copy_files(file_list_path, destination_folder):
                                 copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
                             else:
                                 print(f"\nMoving: {file_name} → {dest_path}")
-                                move_file(file_path, dest_path)  # Move non-MP4 files directly
+                                move_file_with_progress(file_path, dest_path)  # Move non-MP4 files directly
 
                         # If copy or move was successful, remove the file from the remaining list
                         remaining_files.remove(file_entry)
@@ -174,27 +166,18 @@ def copy_files(file_list_path, destination_folder):
                 save_json(file_list_path, data)
     except KeyboardInterrupt:
         print("\nProcess interrupted. Saving progress...")
-
-        # Clean up: delete the partially copied file if it was being copied
+        # Clean up: delete the partially processed file if it was being processed
         if current_file_path and os.path.exists(current_file_path):
-            print(f"Deleting partially copied file: {current_file_path}")
+            print(f"Deleting partially processed file: {current_file_path}")
             os.remove(current_file_path)
-            logging.shutdown()
-            if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
-                os.remove('copy_errors.log')
-                print("Deleted empty copy_errors.log file")
-                sys.exit(0)
-
+        logging.shutdown()
+        if os.path.exists('process_errors.log') and os.path.getsize('process_errors.log') == 0:
+            os.remove('process_errors.log')
+            print("Deleted empty process_errors.log file")
+        sys.exit(0)
     data["files"] = remaining_files
     save_json(file_list_path, data)
     print("File processing complete.")
-
-    # Flush and close the log file before checking if it's empty
-    logging.shutdown()
-    # Check if the log file is empty and delete it if it is
-    if os.path.exists('copy_errors.log') and os.path.getsize('copy_errors.log') == 0:
-        os.remove('copy_errors.log')
-        print("Deleted empty copy_errors.log file.")
 
 def get_paths():
     root = tk.Tk()
@@ -215,8 +198,7 @@ def get_paths():
 
 if __name__ == "__main__":
     file_list, destination = get_paths()
-
     if not os.path.isdir(destination):
         print("Invalid destination folder.")
     else:
-        copy_files(file_list, destination)
+        process_json(file_list, destination)
