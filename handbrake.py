@@ -147,17 +147,21 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                 dirs.remove(d)
         
         for filename in files:
-            if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov', '.mpg', '.webm')):
-                all_files.append(os.path.join(root, filename))
+            if filename.lower().endswith(('.mp4', '.mkv', '.avi', '.mov')):
+                file_path = os.path.join(root, filename)
+                file_size = os.path.getsize(file_path)
+                all_files.append((file_path, file_size))
 
-    total_files = len(all_files)
-    if total_files == 0:
+    if not all_files:
         print("No files found to process. Exiting.")
         return
 
+    # Sort files by size (smallest first)
+    all_files.sort(key=lambda x: x[1])
+
     file_progress = tqdm(total=len(all_files), desc="Total Progress", unit="file", ncols=80, dynamic_ncols=True, position=0, leave=True)
 
-    for file_path in all_files:
+    for file_path, _ in all_files:
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
         output_file = os.path.join(destination_folder, filename)
