@@ -78,18 +78,52 @@ def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
 
     return files_to_process
 
+def load_existing_data(output_file):
+    """Load existing data from the output file if it exists."""
+    if os.path.exists(output_file):
+        with open(output_file, "r") as f:
+            return json.load(f)
+    return {"encoder": "", "files": []}
+
+def filter_existing_files(existing_files, file_encoder_map, selected_encoder):
+    """Filter existing files to ensure they still qualify for being in the list."""
+    valid_files = []
+    for file_info in existing_files:
+        file_path = file_info["file"]
+        file_extension = os.path.splitext(file_path)[1].lower()
+        file_encoder = file_encoder_map.get(file_path)
+
+        if os.path.exists(file_path) and file_extension != ".mp4" and (selected_encoder == "any" or file_encoder == selected_encoder):
+            valid_files.append(file_info)
+    return valid_files
+
 def main():
     source_folder = input("Enter the path to the folder containing video files: ").strip()
     print("Scanning for video files...")
 
     encoders, video_files, broken_files, file_encoder_map = scan_video_files(source_folder)
-    selected_encoder = get_encoder_choice(encoders)
+    
+    existing_data = load_existing_data(OUTPUT_FILE)
+    if existing_data["encoder"]:
+        selected_encoder = existing_data["encoder"]
+        print(f"Using existing encoder from file: {selected_encoder}")
+    else:
+        selected_encoder = get_encoder_choice(encoders)
 
     print(f"Filtering files using encoder: {selected_encoder}")
     files_to_process = filter_files(video_files, broken_files, file_encoder_map, selected_encoder.lower())
 
+    existing_data["files"] = filter_existing_files(existing_data["files"], file_encoder_map, selected_encoder.lower())
+    existing_data["encoder"] = selected_encoder
+
+    # Add new files to the list if they are not already present
+    existing_files_set = {file_info["file"] for file_info in existing_data["files"]}
+    for file_info in files_to_process:
+        if file_info["file"] not in existing_files_set:
+            existing_data["files"].append(file_info)
+
     with open(OUTPUT_FILE, "w") as f:
-        json.dump({"encoder": selected_encoder, "files": files_to_process}, f, indent=4)
+        json.dump(existing_data, f, indent=4)
 
     print(f"List of {len(files_to_process)} files to process saved to {OUTPUT_FILE}")
     print("Processing complete.")
