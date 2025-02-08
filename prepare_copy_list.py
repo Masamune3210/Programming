@@ -5,6 +5,7 @@ import json
 from tqdm import tqdm  # Progress bar support
 
 OUTPUT_FILE = "files_to_process.json"
+BROKEN_FILE_OUTPUT = "broken_files.json"
 
 def get_video_encoder(file_path):
     """Retrieve the encoder metadata using ffprobe."""
@@ -28,21 +29,21 @@ def scan_video_files(source_folder):
     broken_files = []
     file_encoder_map = {}
     
-    for root, _, files in os.walk(source_folder):
+    for root, _, files in sorted(os.walk(source_folder), key=lambda x: x[0]):
         print(f"Scanning directory: {root}")
-        for file in tqdm(files, desc=f"Scanning {root}", unit="file", leave=False):
+        for file in tqdm(sorted(files), desc=f"Scanning {root}", unit="file", leave=False):
             if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv|webm|mpg)$', file, re.IGNORECASE):
                 file_path = os.path.join(root, file)
                 video_files.append(file_path)
 
                 encoder = get_video_encoder(file_path)
-                if encoder is None:
-                    broken_files.append(file_path)
-                    print(f"[WARNING] Broken file detected: {file_path}")
-                else:
+                if encoder:
                     encoder = encoder.strip()
                     encoders.add(encoder)
                     file_encoder_map[file_path] = encoder
+                else:
+                    broken_files.append(file_path)
+                    print(f"[WARNING] Broken file detected: {file_path}")
 
     return encoders, video_files, broken_files, file_encoder_map
 
@@ -163,7 +164,12 @@ def main():
     with open(OUTPUT_FILE, "w") as f:
         json.dump(existing_data, f, indent=4)
 
+    # Write broken files to a separate JSON file
+    with open(BROKEN_FILE_OUTPUT, "w") as f:
+        json.dump(broken_files, f, indent=4)
+
     print(f"List of {len(files_to_process)} files to process saved to {OUTPUT_FILE}")
+    print(f"List of {len(broken_files)} broken files saved to {BROKEN_FILE_OUTPUT}")
     print("Processing complete.")
 
 if __name__ == "__main__":
