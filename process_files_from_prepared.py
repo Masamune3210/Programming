@@ -55,8 +55,35 @@ def move_file_with_progress(src, dst):
                 pbar.update(len(chunk))
     os.remove(src)
 
+def remove_existing_files(file_list_path, check_folder):
+    """Remove files from the JSON list if they already exist in the check_folder."""
+    try:
+        with open(file_list_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, FileNotFoundError) as e:
+        logging.error(f"Error loading JSON file: {e}")
+        return
+
+    files_to_check = data.get("files", [])
+    if not isinstance(files_to_check, list):
+        logging.error("Invalid format: 'files' should be a list.")
+        return
+
+    updated_files = []
+    for file_entry in files_to_check:
+        file_name = os.path.basename(file_entry["file"])
+        check_path = os.path.join(check_folder, file_name)
+        if not os.path.exists(check_path):
+            updated_files.append(file_entry)
+
+    data["files"] = updated_files
+    save_json(file_list_path, data)
+
 def process_json(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
+    check_folder = 'Y:\\Media\\Plex Media\\Handbrake Output'
+    remove_existing_files(file_list_path, check_folder)
+
     try:
         with open(file_list_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
