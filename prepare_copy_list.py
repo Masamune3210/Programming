@@ -59,6 +59,14 @@ def load_existing_data(output_file):
             return {"encoder": "", "files": []}
     return {"encoder": "", "files": []}
 
+def save_json(data, json_file):
+    """Save data to a JSON file."""
+    try:
+        with open(json_file, "w") as f:
+            json.dump(data, f, indent=4)
+    except Exception as e:
+        print(f"Error saving JSON file: {e}")
+
 def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
     """Filter files that need processing based on encoder and file type."""
     files_to_process = []
@@ -120,21 +128,19 @@ def get_encoder_choice(encoders):
 
 def main():
     existing_data = load_existing_data(OUTPUT_FILE)
+    broken_data = load_existing_data(BROKEN_FILE_OUTPUT)
+    
     if existing_data["encoder"]:
         selected_encoder = existing_data["encoder"]
         print(f"Using existing encoder from file: {selected_encoder}")
         video_files = [file_info["file"] for file_info in existing_data["files"]]
-        broken_files = []
+        broken_files = broken_data["files"]
         file_encoder_map = {file_info["file"]: selected_encoder for file_info in existing_data["files"]}
         existing_data["files"], removed_files_count = filter_existing_files(existing_data["files"], file_encoder_map, selected_encoder)
         print(f"Removed {removed_files_count} files from existing JSON.")
         
         # Flush updated JSON to disk
-        try:
-            with open(OUTPUT_FILE, "w") as f:
-                json.dump(existing_data, f, indent=4)
-        except Exception as e:
-            print(f"Error saving JSON file: {e}")
+        save_json(existing_data, OUTPUT_FILE)
     else:
         selected_encoder = ""
         video_files, broken_files, file_encoder_map = [], [], {}
@@ -170,18 +176,11 @@ def main():
             existing_data["files"].append(file_info)
 
     # Save valid files to process
-    try:
-        with open(OUTPUT_FILE, "w") as f:
-            json.dump(existing_data, f, indent=4)
-    except Exception as e:
-        print(f"Error saving JSON file: {e}")
+    save_json(existing_data, OUTPUT_FILE)
 
     # Save broken files with the correct schema
-    try:
-        with open(BROKEN_FILE_OUTPUT, "w") as f:
-            json.dump(broken_files, f, indent=4)
-    except Exception as e:
-        print(f"Error saving broken files JSON: {e}")
+    broken_data["files"] = broken_files
+    save_json(broken_data, BROKEN_FILE_OUTPUT)
 
     print(f"List of {len(files_to_process)} files to process saved to {OUTPUT_FILE}")
     print(f"List of {len(broken_files)} broken files saved to {BROKEN_FILE_OUTPUT}")
