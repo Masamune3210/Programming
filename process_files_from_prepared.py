@@ -168,6 +168,8 @@ def process_json(file_list_path, destination_folder):
         os.makedirs(retag_folder, exist_ok=True)
         twenty_folder = os.path.join(destination_folder, "2160")
         os.makedirs(twenty_folder, exist_ok=True)
+        kids_folder = os.path.join(destination_folder, "kids")
+        os.makedirs(kids_folder, exist_ok=True)
 
     processed_count = 0
     remaining_files = list(files_to_copy)
@@ -197,7 +199,9 @@ def process_json(file_list_path, destination_folder):
                     else:
                         dest_path = os.path.join(retag_folder if file_size < RETAG_THRESHOLD else destination_folder, file_name)
 
-                if os.path.exists(dest_path):
+                # Check if the file already exists in the destination or kids folder
+                kids_dest_path = os.path.join(kids_folder, file_name)
+                if os.path.exists(dest_path) or os.path.exists(kids_dest_path):
                     print(f"\nAlready exists (treating as copied): {file_name}")
                     remaining_files.remove(file_entry)
                     processed_count += 1
