@@ -43,6 +43,8 @@ def scan_video_files(source_folder):
                     file_encoder_map[file_path] = encoder
                 else:
                     broken_files.append(file_path)
+                    with open(BROKEN_FILE_OUTPUT, "w") as f:
+                        json.dump(broken_files, f, indent=4)
                     print(f"[WARNING] Broken file detected: {file_path}")
 
     return encoders, video_files, broken_files, file_encoder_map
