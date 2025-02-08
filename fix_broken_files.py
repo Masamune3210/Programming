@@ -18,6 +18,7 @@ def get_user_input():
         initialdir="G:/Users/Johnny/Downloads/Programming"
     )
     dest_folder = filedialog.askdirectory(
+        os.makedirs("E:/fixing", exist_ok=True),
         title="Select Destination Folder", 
         initialdir="E:/fixing"
     )
