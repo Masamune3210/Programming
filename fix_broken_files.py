@@ -3,6 +3,11 @@ import os
 import subprocess
 import shutil
 
+# Configurable settings
+REMUX_COMMAND = ['ffmpeg', '-i', '{input}', '-c', 'copy', '{output}']
+REENCODE_COMMAND = ['ffmpeg', '-i', '{input}', '-c:v', 'copy', '-c:a', 'aac', '{output}']
+CHECK_COMMAND = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', '{input}']
+
 def get_user_input():
     json_file = input("Enter the path to the JSON file: ")
     dest_folder = input("Enter the destination folder: ")
@@ -14,17 +19,17 @@ def load_json(json_file):
     return data
 
 def remux_file(file_path, output_path):
-    command = ['ffmpeg', '-i', file_path, '-c', 'copy', output_path]
+    command = [arg.format(input=file_path, output=output_path) for arg in REMUX_COMMAND]
     result = subprocess.run(command, capture_output=True)
     return result.returncode == 0
 
 def reencode_audio(file_path, output_path):
-    command = ['ffmpeg', '-i', file_path, '-c:v', 'copy', '-c:a', 'aac', output_path]
+    command = [arg.format(input=file_path, output=output_path) for arg in REENCODE_COMMAND]
     result = subprocess.run(command, capture_output=True)
     return result.returncode == 0
 
 def check_file(file_path):
-    command = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', file_path]
+    command = [arg.format(input=file_path) for arg in CHECK_COMMAND]
     result = subprocess.run(command, capture_output=True)
     return result.returncode == 0
 

@@ -3,10 +3,12 @@ import subprocess
 import shutil
 from tqdm import tqdm
 
-# ========== CONFIGURABLE SETTINGS ==========
-ToolText = "HandBrake 1.9.0 2024120100"  # Text to be written to the Tool tag
-mp4tagPath = r"C:\\Tools\\mp4tag\\mp4tag.exe"  # Path to the mp4tag executable
-# ===========================================
+# Configurable settings
+TOOL_TEXT = "HandBrake 1.9.0 2024120100"  # Text to be written to the Tool tag
+MP4TAG_PATH = r"C:\\Tools\\mp4tag\\mp4tag.exe"  # Path to the mp4tag executable
+SUPPORTED_EXTENSIONS = ('.mkv', '.webm', '.avi', '.mpg')
+FAILED_FOLDER_NAME = "failedconv"
+TAGGED_FOLDER_NAME = "tagged"
 
 def convert_and_tag_mp4(source_folder, destination_folder):
     # Ensure the source folder exists
@@ -25,7 +27,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
     failed_conversions = []
 
     # Create a folder for failed conversions
-    failed_folder = os.path.join(source_folder, "failedconv")
+    failed_folder = os.path.join(source_folder, FAILED_FOLDER_NAME)
     os.makedirs(failed_folder, exist_ok=True)
 
     while True:
@@ -35,8 +37,8 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             for file in files:
                 all_files.append(os.path.join(root, file))
 
-        source_files = [file for file in all_files if file.lower().endswith(('.mkv', '.webm', '.avi', '.mpg'))]
-        unsupported_files.extend([file for file in all_files if not file.lower().endswith(('.mkv', '.webm', '.avi', '.mp4', '.mpg'))])
+        source_files = [file for file in all_files if file.lower().endswith(SUPPORTED_EXTENSIONS)]
+        unsupported_files.extend([file for file in all_files if not file.lower().endswith(SUPPORTED_EXTENSIONS + ('.mp4',))])
 
         conversion_made = False
         for file in tqdm(source_files, desc="Converting Files", unit="file"):
@@ -94,8 +96,8 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             os.remove(file)  # Delete original file
             continue
 
-        escaped_tool_text = f'{ToolText}'
-        command = [mp4tagPath, '--set', f'Tool:S:{escaped_tool_text}', file, output_file]
+        escaped_tool_text = f'{TOOL_TEXT}'
+        command = [MP4TAG_PATH, '--set', f'Tool:S:{escaped_tool_text}', file, output_file]
 
         print(f"\nTagging file: {file}")
         try:

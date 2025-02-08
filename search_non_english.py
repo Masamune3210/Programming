@@ -4,6 +4,7 @@ import subprocess
 from tqdm import tqdm
 
 LOG_FILE = "non_english_audio.json"
+SUPPORTED_EXTENSIONS = (".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv", ".webm", ".mpg")
 
 def load_existing_log():
     """Loads the existing JSON log file if it exists, otherwise returns an empty structure."""
@@ -61,7 +62,7 @@ def scan_directory(root_folder):
     # Collect all media files first for tqdm progress bar
     for dirpath, _, filenames in os.walk(root_folder):
         for file in filenames:
-            if file.lower().endswith((".mp4", ".mkv", ".avi", ".mov", ".flv", ".wmv")):
+            if file.lower().endswith(SUPPORTED_EXTENSIONS):
                 all_files.append(os.path.join(dirpath, file))
 
     if not all_files:

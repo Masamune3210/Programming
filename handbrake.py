@@ -7,11 +7,20 @@ import psutil  # For force killing HandBrakeCLI if needed
 import re
 from tqdm import tqdm
 
+# Configurable settings
+HANDBRAKECLI_DEFAULT_PATH = r"C:\\Tools\\handbrakecli"
+PRESETS = {
+    "kids": "1080p Kids",
+    "2160": "4k hdr3",
+    "default": "1080p4"
+}
+EXCLUDED_DIRS = ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored"]
+
 current_output_file = None
 current_process = None  # Track HandBrakeCLI process
 
 def find_handbrakecli():
-    handbrakecli_path = r"C:\Tools\handbrakecli"
+    handbrakecli_path = HANDBRAKECLI_DEFAULT_PATH
     if not os.path.exists(handbrakecli_path):
         handbrakecli_path = input("HandBrakeCLI not found at default location. Please provide the full path: ")
         if not os.path.exists(handbrakecli_path):
@@ -131,18 +140,18 @@ def get_preset_for_file(file_path, source_folder):
     folder_name = os.path.dirname(relative_path).lower()
 
     if folder_name == "kids":
-        return "1080p Kids"
+        return PRESETS["kids"]
     elif folder_name == "2160":
-        return "4k hdr3"
+        return PRESETS["2160"]
     else:
-        return "1080p4"
+        return PRESETS["default"]
 
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
 
     all_files = []
     for root, dirs, files in os.walk(source_folder):
-        for d in ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored"]:
+        for d in EXCLUDED_DIRS:
             if d in dirs:
                 dirs.remove(d)
         
