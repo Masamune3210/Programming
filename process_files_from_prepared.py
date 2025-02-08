@@ -13,6 +13,11 @@ logging.basicConfig(filename='process_errors.log', level=logging.ERROR, format='
 # Minimum free space required beyond file size (in bytes)
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
 RETAG_THRESHOLD = 500 * 1024 * 1024  # 500MB
+CHECK_FOLDER = 'Y:\\Media\\Plex Media\\Handbrake Output'
+NON_ENGLISHJSON = 'non_english_audio.json'
+DEFAULT_SOURCE_DIR = 'E:\\'
+DEFAULT_JSON_DIR = 'G:\\Users\\Johnny\\Downloads\\Programming'
+DEFAULT_JSON_FILE = 'files_to_process.json'
 
 def get_free_space(folder):
     """Return free space available on the drive containing the folder using shutil."""
@@ -55,7 +60,7 @@ def move_file_with_progress(src, dst):
                 pbar.update(len(chunk))
     os.remove(src)
 
-def remove_existing_files(file_list_path, check_folder):
+def remove_existing_files(file_list_path, check_folder=CHECK_FOLDER):
     """Remove files from the JSON list if they already exist in the check_folder."""
     try:
         with open(file_list_path, 'r', encoding='utf-8') as f:
@@ -81,8 +86,7 @@ def remove_existing_files(file_list_path, check_folder):
 
 def process_json(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
-    check_folder = 'Y:\\Media\\Plex Media\\Handbrake Output'
-    remove_existing_files(file_list_path, check_folder)
+    remove_existing_files(file_list_path)
 
     try:
         with open(file_list_path, 'r', encoding='utf-8') as f:
@@ -123,7 +127,7 @@ def process_json(file_list_path, destination_folder):
     print(f"Space required for {len(eligible_files)} files: {total_space_needed / (1024**3):.2f} GB")
 
     # Check if the JSON file is named non_english_audio.json
-    is_non_english_audio = os.path.basename(file_list_path) == "non_english_audio.json"
+    is_non_english_audio = os.path.basename(file_list_path) == NON_ENGLISHJSON
 
     if not is_non_english_audio:
         retag_folder = os.path.join(destination_folder, "retag")
@@ -208,17 +212,18 @@ def process_json(file_list_path, destination_folder):
 def get_paths():
     root = tk.Tk()
     root.withdraw()
-    initial_dir = os.path.expanduser('E:\\')
+    initial_dir = os.path.expanduser(DEFAULT_SOURCE_DIR)
     destination_folder = filedialog.askdirectory(initialdir=initial_dir, title='Select Destination Folder:')
 
     if not destination_folder:
         print('User cancelled the selection dialog, using default directory instead.')
         destination_folder = initial_dir
 
-    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser('G:\\Users\\Johnny\\Downloads\\Programming'), title='Select File List:', filetypes=(('JSON Files', '*.json'),))
+    file_list = filedialog.askopenfilename(initialdir=os.path.expanduser(DEFAULT_JSON_DIR), title='Select File List:', filetypes=(('JSON Files', '*.json'),))
 
     if not file_list:
-        print('User cancelled the file list selection.')
+        print('User cancelled the file list selection, using default JSON file instead.')
+        file_list = os.path.join(DEFAULT_JSON_DIR, DEFAULT_JSON_FILE)
     
     return file_list, destination_folder
 
