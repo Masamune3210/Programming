@@ -113,10 +113,9 @@ def remove_existing_files(file_list_path, check_folder=CHECK_FOLDER):
     data["files"] = updated_files
     save_json(file_list_path, data)
 
-def process_json(file_list_path, destination_folder, skip_check=False):
+def process_json(file_list_path, destination_folder):
     """Copy files from the JSON list to the destination folder while ensuring space and avoiding duplicates."""
-    if not skip_check:
-        remove_existing_files(file_list_path)
+    remove_existing_files(file_list_path)
 
     try:
         with open(file_list_path, 'r', encoding='utf-8') as f:
@@ -266,5 +265,4 @@ if __name__ == "__main__":
     if not os.path.isdir(destination):
         print("Invalid destination folder.")
     else:
-        skip_check = input("Press 's' to skip checking existing data: ").lower() == 's'
-        process_json(file_list, destination, skip_check)
+        process_json(file_list, destination)
