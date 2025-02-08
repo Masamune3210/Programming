@@ -17,6 +17,7 @@ def get_user_input():
         filetypes=[("JSON files", "*.json")], 
         initialdir="G:/Users/Johnny/Downloads/Programming"
     )
+    os.makedirs('E:/fixing', exist_ok=True)
     dest_folder = filedialog.askdirectory(
         title="Select Destination Folder", 
         initialdir="E:/fixing"
