@@ -1,6 +1,7 @@
 import os
 import subprocess
 import glob
+import sys
 
 # The list containing the files to compress
 files = []
@@ -35,14 +36,23 @@ print(f' - Found {len(files)} VHDX file(s)')
 print(' - Shutting down WSL2')
 
 # Run WSL commands
-subprocess.run(['wsl', '-e', 'sudo', 'fstrim', '/'])
-subprocess.run(['wsl', '--shutdown'])
+try:
+    subprocess.run(['wsl', '-e', 'sudo', 'fstrim', '/'], check=True)
+    subprocess.run(['wsl', '--shutdown'], check=True)
+except subprocess.CalledProcessError as e:
+    print(f"Error running WSL commands: {e}")
+    sys.exit(1)
 
 # Compact the disks
 for disk in files:
     print("-----")
     print(f"Disk to compact: {disk}")
-    print(f"Length: {os.path.getsize(disk) / (1024 * 1024):.2f} MB")
+    try:
+        print(f"Length: {os.path.getsize(disk) / (1024 * 1024):.2f} MB")
+    except OSError as e:
+        print(f"Error getting size of {disk}: {e}")
+        continue
+
     print("Compacting disk (starting diskpart)")
     
     diskpart_commands = f"""
@@ -53,11 +63,17 @@ for disk in files:
     exit
     """
     
-    subprocess.run(['diskpart'], input=diskpart_commands, text=True)
+    try:
+        subprocess.run(['diskpart'], input=diskpart_commands, text=True, check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Error compacting disk {disk}: {e}")
+        continue
     
-    print("")
-    print(f"Success. Compacted {disk}.")
-    print(f"New length: {os.path.getsize(disk) / (1024 * 1024):.2f} MB")
+    try:
+        print(f"Success. Compacted {disk}.")
+        print(f"New length: {os.path.getsize(disk) / (1024 * 1024):.2f} MB")
+    except OSError as e:
+        print(f"Error getting new size of {disk}: {e}")
 
 print("=======")
 print(f"Compacting of {len(files)} file(s) complete")

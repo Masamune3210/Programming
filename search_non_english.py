@@ -12,15 +12,19 @@ def load_existing_log():
         try:
             with open(LOG_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except (json.JSONDecodeError, FileNotFoundError):
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            print(f"Error loading log file: {e}")
             return {"files": []}
     return {"files": []}
 
 def save_log(log_data):
     """Writes and flushes the log data to the JSON file."""
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(log_data, f, indent=4)
-        f.flush()
+    try:
+        with open(LOG_FILE, "w", encoding="utf-8") as f:
+            json.dump(log_data, f, indent=4)
+            f.flush()
+    except Exception as e:
+        print(f"Error saving log file: {e}")
 
 def get_audio_languages(file_path):
     """Runs ffprobe to get the language of audio tracks in a media file."""

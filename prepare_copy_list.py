@@ -16,12 +16,12 @@ ENCODER_COMMAND = [
 def get_video_encoder(file_path):
     """Retrieve the encoder metadata using ffprobe."""
     command = ENCODER_COMMAND + [file_path]
-    result = subprocess.run(command, capture_output=True, text=True)
-
-    if result.returncode != 0 or result.stderr:
-        return None  # Failed to retrieve encoder
-
-    return result.stdout.strip()
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+    except subprocess.CalledProcessError as e:
+        print(f"Error retrieving encoder for {file_path}: {e}")
+        return None
 
 def scan_video_files(source_folder):
     """Scan the given folder for video files and retrieve their encoders."""
@@ -130,13 +130,20 @@ def main():
         print(f"Removed {removed_files_count} files from existing JSON.")
         
         # Flush updated JSON to disk
-        with open(OUTPUT_FILE, "w") as f:
-            json.dump(existing_data, f, indent=4)
+        try:
+            with open(OUTPUT_FILE, "w") as f:
+                json.dump(existing_data, f, indent=4)
+        except Exception as e:
+            print(f"Error saving JSON file: {e}")
     else:
         selected_encoder = ""
         video_files, broken_files, file_encoder_map = [], [], {}
 
     source_folder = input("Enter the path to the folder containing video files: ").strip()
+    if not os.path.isdir(source_folder):
+        print("Invalid source folder path.")
+        return
+
     print("Scanning for video files...")
 
     encoders, new_video_files, new_broken_files, new_file_encoder_map = scan_video_files(source_folder)
@@ -163,12 +170,18 @@ def main():
             existing_data["files"].append(file_info)
 
     # Save valid files to process
-    with open(OUTPUT_FILE, "w") as f:
-        json.dump(existing_data, f, indent=4)
+    try:
+        with open(OUTPUT_FILE, "w") as f:
+            json.dump(existing_data, f, indent=4)
+    except Exception as e:
+        print(f"Error saving JSON file: {e}")
 
     # Save broken files with the correct schema
-    with open(BROKEN_FILE_OUTPUT, "w") as f:
-        json.dump(broken_files, f, indent=4)
+    try:
+        with open(BROKEN_FILE_OUTPUT, "w") as f:
+            json.dump(broken_files, f, indent=4)
+    except Exception as e:
+        print(f"Error saving broken files JSON: {e}")
 
     print(f"List of {len(files_to_process)} files to process saved to {OUTPUT_FILE}")
     print(f"List of {len(broken_files)} broken files saved to {BROKEN_FILE_OUTPUT}")

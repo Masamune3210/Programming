@@ -73,8 +73,12 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 os.remove(file)
                 print(f"\nConverted and removed original file: {file}")
                 conversion_made = True
-            except subprocess.CalledProcessError:
-                print(f"\nFailed to convert file: {file}. Moving to 'failedconv'.")
+            except subprocess.CalledProcessError as e:
+                print(f"\nFailed to convert file: {file}. Error: {e}. Moving to 'failedconv'.")
+                failed_conversions.append(file)
+                shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
+            except Exception as e:
+                print(f"\nUnexpected error during conversion: {e}. Moving to 'failedconv'.")
                 failed_conversions.append(file)
                 shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
 
@@ -104,8 +108,11 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             subprocess.run(command, check=True)
             print(f"\nSuccess: Tagged file saved to '{output_file}'.")
             os.remove(file)  # Delete original file after successful tagging
-        except subprocess.CalledProcessError:
-            print(f"\nError: Failed to write the Tool tag for '{file}'.")
+        except subprocess.CalledProcessError as e:
+            print(f"\nError: Failed to write the Tool tag for '{file}'. Error: {e}")
+            failed_tagging_files.append(file)
+        except Exception as e:
+            print(f"\nUnexpected error during tagging: {e}")
             failed_tagging_files.append(file)
 
     # Organize files into subfolders of 99 files each
