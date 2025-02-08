@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import shutil
+from tkinter import Tk, filedialog
 
 # Configurable settings
 REMUX_COMMAND = ['ffmpeg', '-i', '{input}', '-c', 'copy', '{output}']
@@ -9,8 +10,17 @@ REENCODE_COMMAND = ['ffmpeg', '-i', '{input}', '-c:v', 'copy', '-c:a', 'aac', '{
 CHECK_COMMAND = ['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', '{input}']
 
 def get_user_input():
-    json_file = input("Enter the path to the JSON file: ")
-    dest_folder = input("Enter the destination folder: ")
+    root = Tk()
+    root.withdraw()  # Hide the root window
+    json_file = filedialog.askopenfilename(
+        title="Select JSON File", 
+        filetypes=[("JSON files", "*.json")], 
+        initialdir="G:/Users/Johnny/Downloads/Programming"
+    )
+    dest_folder = filedialog.askdirectory(
+        title="Select Destination Folder", 
+        initialdir="E:/fixing"
+    )
     return json_file, dest_folder
 
 def load_json(json_file):
