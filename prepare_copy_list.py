@@ -40,7 +40,7 @@ def scan_video_files(source_folder):
                     broken_files.append(file_path)
                     print(f"[WARNING] Broken file detected: {file_path}")
                 else:
-                    encoder = encoder.strip().lower()
+                    encoder = encoder.strip()
                     encoders.add(encoder)
                     file_encoder_map[file_path] = encoder
 
@@ -65,7 +65,7 @@ def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
         if file in broken_files:
             continue  # Skip broken files
         
-        file_extension = os.path.splitext(file)[1].lower()
+        file_extension = os.path.splitext(file)[1]
         file_encoder = file_encoder_map.get(file)
 
         if file_extension == ".mp4":
@@ -84,7 +84,7 @@ def filter_existing_files(existing_files, file_encoder_map, selected_encoder):
     removed_files_count = 0
     for file_info in tqdm(existing_files, desc="Filtering existing files", unit="file"):
         file_path = file_info["file"]
-        file_extension = os.path.splitext(file_path)[1].lower()
+        file_extension = os.path.splitext(file_path)[1]
         file_encoder = get_video_encoder(file_path)  # Recheck encoder
 
         if os.path.exists(file_path):
@@ -150,7 +150,7 @@ def main():
             return
 
     print(f"Filtering files using encoder: {selected_encoder}")
-    files_to_process = filter_files(video_files, broken_files, file_encoder_map, selected_encoder.lower())
+    files_to_process = filter_files(video_files, broken_files, file_encoder_map, selected_encoder)
 
     existing_data["encoder"] = selected_encoder
 
