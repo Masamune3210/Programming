@@ -7,10 +7,8 @@ from tqdm import tqdm  # Add tqdm for progress bar
 import logging
 import sys
 
-# Setup logging
-logging.basicConfig(filename='process_errors.log', level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
-
-# Minimum free space required beyond file size (in bytes)
+# Configurable settings
+LOG_FILE = 'process_errors.log'
 EXTRA_SPACE_REQUIRED = 500 * 1024 * 1024  # 500MB
 RETAG_THRESHOLD = 500 * 1024 * 1024  # 500MB
 CHECK_FOLDER = 'Y:\\Media\\Plex Media\\Handbrake Output'
@@ -18,6 +16,9 @@ NON_ENGLISHJSON = 'non_english_audio.json'
 DEFAULT_SOURCE_DIR = 'E:\\'
 DEFAULT_JSON_DIR = 'G:\\Users\\Johnny\\Downloads\\Programming'
 DEFAULT_JSON_FILE = 'files_to_process.json'
+
+# Setup logging
+logging.basicConfig(filename=LOG_FILE, level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_free_space(folder):
     """Return free space available on the drive containing the folder using shutil."""
@@ -234,8 +235,8 @@ def process_json(file_list_path, destination_folder):
             print(f"Deleting partially processed file: {current_file_path}")
             os.remove(current_file_path)
         logging.shutdown()
-        if os.path.exists('process_errors.log') and os.path.getsize('process_errors.log') == 0:
-            os.remove('process_errors.log')
+        if os.path.exists(LOG_FILE) and os.path.getsize(LOG_FILE) == 0:
+            os.remove(LOG_FILE)
             print("Deleted empty process_errors.log file")
         sys.exit(0)
     data["files"] = remaining_files

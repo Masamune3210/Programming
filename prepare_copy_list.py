@@ -6,15 +6,16 @@ from tqdm import tqdm  # Progress bar support
 
 OUTPUT_FILE = "files_to_process.json"
 BROKEN_FILE_OUTPUT = "broken_files.json"
+VIDEO_EXTENSIONS = ('.mp4', '.mkv', '.avi', '.mov', '.flv', '.wmv', '.webm', '.mpg')
+ENCODER_COMMAND = [
+    "ffprobe", "-v", "error",
+    "-show_entries", "format_tags=encoder",
+    "-of", "default=noprint_wrappers=1:nokey=1"
+]
 
 def get_video_encoder(file_path):
     """Retrieve the encoder metadata using ffprobe."""
-    command = [
-        "ffprobe", "-v", "error",
-        "-show_entries", "format_tags=encoder",
-        "-of", "default=noprint_wrappers=1:nokey=1",
-        file_path
-    ]
+    command = ENCODER_COMMAND + [file_path]
     result = subprocess.run(command, capture_output=True, text=True)
 
     if result.returncode != 0 or result.stderr:
