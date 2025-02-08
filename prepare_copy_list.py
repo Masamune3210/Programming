@@ -28,7 +28,7 @@ def scan_video_files(source_folder):
     broken_files = []
     file_encoder_map = {}
     
-    for root, _, files in os.walk(source_folder):
+    for root, _, files in tqdm(os.walk(source_folder), desc="Scanning directories", unit="directory", leave=True):
         print(f"Scanning directory: {root}")
         for file in files:
             if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv)$', file, re.IGNORECASE):
@@ -88,32 +88,50 @@ def load_existing_data(output_file):
 def filter_existing_files(existing_files, file_encoder_map, selected_encoder):
     """Filter existing files to ensure they still qualify for being in the list."""
     valid_files = []
-    for file_info in existing_files:
+    removed_files_count = 0
+    for file_info in tqdm(existing_files, desc="Filtering existing files", unit="file"):
         file_path = file_info["file"]
         file_extension = os.path.splitext(file_path)[1].lower()
         file_encoder = file_encoder_map.get(file_path)
 
         if os.path.exists(file_path) and file_extension != ".mp4" and (selected_encoder == "any" or file_encoder == selected_encoder):
             valid_files.append(file_info)
-    return valid_files
+        else:
+            removed_files_count += 1
+    return valid_files, removed_files_count
 
 def main():
-    source_folder = input("Enter the path to the folder containing video files: ").strip()
-    print("Scanning for video files...")
-
-    encoders, video_files, broken_files, file_encoder_map = scan_video_files(source_folder)
-    
     existing_data = load_existing_data(OUTPUT_FILE)
     if existing_data["encoder"]:
         selected_encoder = existing_data["encoder"]
         print(f"Using existing encoder from file: {selected_encoder}")
+        video_files = [file_info["file"] for file_info in existing_data["files"]]
+        broken_files = []
+        file_encoder_map = {file_info["file"]: selected_encoder for file_info in existing_data["files"]}
+        existing_data["files"], removed_files_count = filter_existing_files(existing_data["files"], file_encoder_map, selected_encoder)
+        print(f"Removed {removed_files_count} files from existing JSON.")
+        
+        # Flush updated JSON to disk
+        with open(OUTPUT_FILE, "w") as f:
+            json.dump(existing_data, f, indent=4)
     else:
+        selected_encoder = ""
+        video_files, broken_files, file_encoder_map = [], [], {}
+
+    source_folder = input("Enter the path to the folder containing video files: ").strip()
+    print("Scanning for video files...")
+
+    encoders, new_video_files, new_broken_files, new_file_encoder_map = scan_video_files(source_folder)
+    video_files.extend(new_video_files)
+    broken_files.extend(new_broken_files)
+    file_encoder_map.update(new_file_encoder_map)
+
+    if not selected_encoder:
         selected_encoder = get_encoder_choice(encoders)
 
     print(f"Filtering files using encoder: {selected_encoder}")
     files_to_process = filter_files(video_files, broken_files, file_encoder_map, selected_encoder.lower())
 
-    existing_data["files"] = filter_existing_files(existing_data["files"], file_encoder_map, selected_encoder.lower())
     existing_data["encoder"] = selected_encoder
 
     # Add new files to the list if they are not already present
