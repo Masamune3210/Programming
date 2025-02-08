@@ -21,14 +21,25 @@ DEFAULT_JSON_FILE = 'files_to_process.json'
 
 def get_free_space(folder):
     """Return free space available on the drive containing the folder using shutil."""
-    disk_usage = shutil.disk_usage(folder)
-    return disk_usage.free  # Return the free space available
+    try:
+        disk_usage = shutil.disk_usage(folder)
+        return disk_usage.free  # Return the free space available
+    except FileNotFoundError:
+        logging.error(f"Folder not found: {folder}")
+        return 0
+    except PermissionError:
+        logging.error(f"Permission denied: {folder}")
+        return 0
 
 def save_json(file_list_path, data):
     """Save the updated file list back to JSON to keep progress consistent."""
     try:
         with open(file_list_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=4)
+    except FileNotFoundError:
+        logging.error(f"File not found: {file_list_path}")
+    except PermissionError:
+        logging.error(f"Permission denied: {file_list_path}")
     except Exception as e:
         logging.error(f"Error updating JSON file: {e}")
 
@@ -38,27 +49,45 @@ def delete_partial_file(file_path):
         try:
             print(f"Deleting partial file: {file_path}")
             os.remove(file_path)
+        except FileNotFoundError:
+            logging.error(f"File not found: {file_path}")
+        except PermissionError:
+            logging.error(f"Permission denied: {file_path}")
         except Exception as e:
             logging.error(f"Error deleting partial file {file_path}: {e}")
 
 def copy_file_with_progress(src, dst):
     """Copy a file and show a progress bar for the current file copy."""
-    total_size = os.path.getsize(src)
-    with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
-        with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Copying {os.path.basename(src)}") as pbar:
-            while (chunk := fsrc.read(1024 * 1024)):  # 1MB chunks
-                fdst.write(chunk)
-                pbar.update(len(chunk))
+    try:
+        total_size = os.path.getsize(src)
+        with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
+            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Copying {os.path.basename(src)}") as pbar:
+                while (chunk := fsrc.read(1024 * 1024)):  # 1MB chunks
+                    fdst.write(chunk)
+                    pbar.update(len(chunk))
+    except FileNotFoundError:
+        logging.error(f"File not found: {src} or {dst}")
+    except PermissionError:
+        logging.error(f"Permission denied: {src} or {dst}")
+    except Exception as e:
+        logging.error(f"Error copying file from {src} to {dst}: {e}")
 
 def move_file_with_progress(src, dst):
     """Move a file and show a progress bar for the current file move."""
-    total_size = os.path.getsize(src)
-    with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
-        with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Moving {os.path.basename(src)}") as pbar:
-            while (chunk := fsrc.read(1024 * 1024)):  # 1MB chunks
-                fdst.write(chunk)
-                pbar.update(len(chunk))
-    os.remove(src)
+    try:
+        total_size = os.path.getsize(src)
+        with open(src, 'rb') as fsrc, open(dst, 'wb') as fdst:
+            with tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Moving {os.path.basename(src)}") as pbar:
+                while (chunk := fsrc.read(1024 * 1024)):  # 1MB chunks
+                    fdst.write(chunk)
+                    pbar.update(len(chunk))
+        os.remove(src)
+    except FileNotFoundError:
+        logging.error(f"File not found: {src} or {dst}")
+    except PermissionError:
+        logging.error(f"Permission denied: {src} or {dst}")
+    except Exception as e:
+        logging.error(f"Error moving file from {src} to {dst}: {e}")
 
 def remove_existing_files(file_list_path, check_folder=CHECK_FOLDER):
     """Remove files from the JSON list if they already exist in the check_folder."""
@@ -109,6 +138,10 @@ def process_json(file_list_path, destination_folder):
     files_to_copy.sort(key=lambda x: x['size'], reverse=False)
 
     free_space = get_free_space(destination_folder)
+    if free_space == 0:
+        print("Unable to determine free space or insufficient permissions.")
+        return
+
     total_space_needed = 0
     eligible_files = []
     for file_entry in files_to_copy:
