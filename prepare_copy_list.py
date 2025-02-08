@@ -42,10 +42,8 @@ def scan_video_files(source_folder):
                     encoders.add(encoder)
                     file_encoder_map[file_path] = encoder
                 else:
-                    broken_files.append(file_path)
-                    with open(BROKEN_FILE_OUTPUT, "w") as f:
-                        json.dump(broken_files, f, indent=4)
-                    print(f"[WARNING] Broken file detected: {file_path}")
+                    file_size = os.path.getsize(file_path)
+                    broken_files.append({"file": file_path, "size": file_size})
 
     return encoders, video_files, broken_files, file_encoder_map
 
@@ -65,7 +63,7 @@ def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
     files_to_process = []
 
     for file in tqdm(video_files, desc="Filtering", unit="file"):
-        if file in broken_files:
+        if file in [bf["file"] for bf in broken_files]:
             continue  # Skip broken files
         
         file_extension = os.path.splitext(file)[1]
@@ -163,10 +161,11 @@ def main():
         if file_info["file"] not in existing_files_set:
             existing_data["files"].append(file_info)
 
+    # Save valid files to process
     with open(OUTPUT_FILE, "w") as f:
         json.dump(existing_data, f, indent=4)
 
-    # Write broken files to a separate JSON file
+    # Save broken files with the correct schema
     with open(BROKEN_FILE_OUTPUT, "w") as f:
         json.dump(broken_files, f, indent=4)
 
