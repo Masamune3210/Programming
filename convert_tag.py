@@ -10,6 +10,15 @@ SUPPORTED_EXTENSIONS = ('.mkv', '.webm', '.avi', '.mpg')
 FAILED_FOLDER_NAME = "failedconv"
 TAGGED_FOLDER_NAME = "tagged"
 
+def verify_file_with_ffprobe(file_path):
+    """Verify the output file using ffprobe."""
+    ffprobe_command = [
+        "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name",
+        "-of", "default=noprint_wrappers=1:nokey=1", file_path
+    ]
+    ffprobe_result = subprocess.run(ffprobe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return ffprobe_result.returncode == 0 and ffprobe_result.stdout.strip() != b''
+
 def convert_and_tag_mp4(source_folder, destination_folder):
     # Ensure the source folder exists
     if not os.path.exists(source_folder):
@@ -56,13 +65,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 subprocess.run(ffmpeg_command, check=True, stderr=subprocess.PIPE)
 
                 # Verify the output file using ffprobe
-                ffprobe_command = [
-                    "ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name",
-                    "-of", "default=noprint_wrappers=1:nokey=1", output_file_path
-                ]
-                ffprobe_result = subprocess.run(ffprobe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-                if not ffprobe_result.stdout:
+                if not verify_file_with_ffprobe(output_file_path):
                     print(f"\nError: Verification failed for '{output_file_path}'. Moving original file to 'failedconv'.")
                     failed_conversions.append(file)
                     os.remove(output_file_path)  # Delete failed conversion
@@ -77,11 +80,16 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 error_message = e.stderr.decode()
                 if "Could not find tag for codec subrip" in error_message:
                     print(f"\nRetrying conversion for file: {file} with subtitles re-encoded.")
-                    ffmpeg_command = [
-                        "ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", "-c:s", "mov_text", "-map", "0", output_file_path
-                    ]
+                    ffmpeg_command = ["ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", "-map", "0", "-c:s", "mov_text", output_file_path]
                     try:
                         subprocess.run(ffmpeg_command, check=True)
+                        # Verify the output file using ffprobe
+                        if not verify_file_with_ffprobe(output_file_path):
+                            print(f"\nError: Verification failed for '{output_file_path}'. Moving original file to 'failedconv'.")
+                            failed_conversions.append(file)
+                            os.remove(output_file_path)  # Delete failed conversion
+                            shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))  # Move source file
+                            continue
                         os.remove(file)
                         print(f"\nConverted and removed original file: {file}")
                         conversion_made = True
