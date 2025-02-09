@@ -180,7 +180,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
     for file_path, _ in non_mp4_files:
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
-        output_file = os.path.join(destination_folder, filename)
+        output_file = os.path.join(destination_folder, os.path.splitext(filename)[0] + ".mp4")
         print(f"\nProcessing: {filename} - {preset_name}")
 
         if encode_video(file_path, output_file, preset_name, handbrakecli_path):
