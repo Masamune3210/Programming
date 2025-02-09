@@ -219,6 +219,7 @@ def process_json(file_list_path, destination_folder):
                                 copy_file_with_progress(file_path, dest_path)  # Copy the file with progress bar
                             else:
                                 print(f"\nMoving: {file_name} → {dest_path}")
+                                current_file_path = dest_path  # Store the current destination path of the file being moved
                                 move_file_with_progress(file_path, dest_path)  # Move non-MP4 files directly
 
                         # If copy or move was successful, remove the file from the remaining list
