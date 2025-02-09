@@ -53,7 +53,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             ]
 
             try:
-                subprocess.run(ffmpeg_command, check=True)
+                subprocess.run(ffmpeg_command, check=True, stderr=subprocess.PIPE)
 
                 # Verify the output file using ffprobe
                 ffprobe_command = [
@@ -74,9 +74,25 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 print(f"\nConverted and removed original file: {file}")
                 conversion_made = True
             except subprocess.CalledProcessError as e:
-                print(f"\nFailed to convert file: {file}. Error: {e}. Moving to 'failedconv'.")
-                failed_conversions.append(file)
-                shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
+                error_message = e.stderr.decode()
+                if "Could not find tag for codec subrip" in error_message:
+                    print(f"\nRetrying conversion for file: {file} with subtitles re-encoded.")
+                    ffmpeg_command = [
+                        "ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", "-c:s", "mov_text", "-map", "0", output_file_path
+                    ]
+                    try:
+                        subprocess.run(ffmpeg_command, check=True)
+                        os.remove(file)
+                        print(f"\nConverted and removed original file: {file}")
+                        conversion_made = True
+                    except subprocess.CalledProcessError as e:
+                        print(f"\nFailed to convert file: {file}. Error: {e}. Moving to 'failedconv'.")
+                        failed_conversions.append(file)
+                        shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
+                else:
+                    print(f"\nFailed to convert file: {file}. Error: {e}. Moving to 'failedconv'.")
+                    failed_conversions.append(file)
+                    shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
             except Exception as e:
                 print(f"\nUnexpected error during conversion: {e}. Moving to 'failedconv'.")
                 failed_conversions.append(file)
