@@ -20,6 +20,15 @@ def verify_file_with_ffprobe(file_path):
     ffprobe_result = subprocess.run(ffprobe_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return ffprobe_result.returncode == 0 and ffprobe_result.stdout.strip() != b''
 
+def remove_0kb_files(folder):
+    """Remove all 0KB files in the specified folder."""
+    for root, dirs, files in os.walk(folder):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if os.path.getsize(file_path) == 0:
+                print(f"\nDeleting 0KB file: {file_path}")
+                send2trash.send2trash(file_path)
+
 def convert_and_tag_mp4(source_folder, destination_folder):
     # Ensure the source folder exists
     if not os.path.exists(source_folder):
@@ -30,6 +39,9 @@ def convert_and_tag_mp4(source_folder, destination_folder):
     if not os.path.exists(destination_folder):
         os.makedirs(destination_folder)
         print(f"\nDestination folder created: {destination_folder}")
+
+    # Remove 0KB files from the source folder
+    remove_0kb_files(source_folder)
 
     # Initialize lists to track unprocessed files
     unsupported_files = []
@@ -94,6 +106,9 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             continue
         else:
             break
+
+    # Remove 0KB files from the destination folder
+    remove_0kb_files(destination_folder)
 
     # Tag all MP4 files (excluding failed conversions)
     all_mp4_files = [file for file in all_files if file.lower().endswith('.mp4')]
