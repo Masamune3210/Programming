@@ -166,12 +166,32 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
         print("No files found to process. Exiting.")
         return
 
+    # Separate non-MP4 and MP4 files
+    non_mp4_files = [file for file in all_files if not file[0].lower().endswith('.mp4')]
+    mp4_files = [file for file in all_files if file[0].lower().endswith('.mp4')]
+
     # Sort files by size (smallest first)
-    all_files.sort(key=lambda x: x[1])
+    non_mp4_files.sort(key=lambda x: x[1])
+    mp4_files.sort(key=lambda x: x[1])
 
     file_progress = tqdm(total=len(all_files), desc="Total Progress", unit="file", ncols=80, dynamic_ncols=True, position=0, leave=True)
 
-    for file_path, _ in all_files:
+    # Process non-MP4 files first
+    for file_path, _ in non_mp4_files:
+        filename = os.path.basename(file_path)
+        preset_name = get_preset_for_file(file_path, source_folder)
+        output_file = os.path.join(destination_folder, filename)
+        print(f"\nProcessing: {filename} - {preset_name}")
+
+        if encode_video(file_path, output_file, preset_name, handbrakecli_path):
+            handle_file(file_path, output_file, source_folder)
+        else:
+            handle_encoding_error(file_path, source_folder)
+
+        file_progress.update(1)
+
+    # Process MP4 files next
+    for file_path, _ in mp4_files:
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
         output_file = os.path.join(destination_folder, filename)
