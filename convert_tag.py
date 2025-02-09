@@ -49,7 +49,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 continue
 
             ffmpeg_command = [
-                "ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", output_file_path
+                "ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", "-map", "0", output_file_path
             ]
 
             try:
