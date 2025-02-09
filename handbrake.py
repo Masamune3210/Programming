@@ -6,6 +6,7 @@ import shutil
 import psutil  # For force killing HandBrakeCLI if needed
 import re
 from tqdm import tqdm
+import send2trash  # Add send2trash for sending files to recycle bin
 
 # Configurable settings
 HANDBRAKECLI_DEFAULT_PATH = r"C:\\Tools\\handbrakecli"
@@ -60,10 +61,10 @@ def cleanup_on_exit(signal, frame):
 
     if current_output_file and os.path.exists(current_output_file):
         try:
-            os.remove(current_output_file)
-            print(f"Deleted partially encoded file: {current_output_file}")
+            send2trash.send2trash(current_output_file)
+            print(f"Sent partially encoded file to recycle bin: {current_output_file}")
         except Exception as e:
-            print(f"Error deleting partial file: {e}")
+            print(f"Error sending partial file to recycle bin: {e}")
 
     sys.exit(0)
 
@@ -120,10 +121,10 @@ def handle_file(input_file, output_file, source_folder):
         print(f"Size Check - Input: {input_size / (1024 * 1024):.2f} MB | Output: {output_size / (1024 * 1024):.2f} MB")
 
         if output_size < input_size:
-            os.remove(input_file)
-            print(f"✅ Deleted input file {input_file} (output is smaller).")
+            send2trash.send2trash(input_file)
+            print(f"✅ Sent input file to recycle bin {input_file} (output is smaller).")
         else:
-            os.remove(output_file)
+            send2trash.send2trash(output_file)
             retag_folder = os.path.join(source_folder, "retag")
             os.makedirs(retag_folder, exist_ok=True)
             shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))

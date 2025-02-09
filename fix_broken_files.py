@@ -3,6 +3,7 @@ import os
 import subprocess
 import shutil
 from tkinter import Tk, filedialog
+import send2trash  # Add send2trash for sending files to recycle bin
 
 # Configurable settings
 REMUX_COMMAND = ['ffmpeg', '-i', '{input}', '-c', 'copy', '{output}']
@@ -78,11 +79,11 @@ def process_files(file_list, dest_folder):
         try:
             if remux_file(file_path, remuxed_path) and check_file(remuxed_path):
                 shutil.move(remuxed_path, os.path.join(fixed_folder, file_name))
-                os.remove(file_path)
+                send2trash.send2trash(file_path)
                 print(f"Successfully remuxed and fixed: {file_name}")
             elif reencode_audio(file_path, reencoded_path) and check_file(reencoded_path):
                 shutil.move(reencoded_path, os.path.join(fixed_folder, file_name))
-                os.remove(file_path)
+                send2trash.send2trash(file_path)
                 print(f"Successfully reencoded audio and fixed: {file_name}")
             else:
                 shutil.move(file_path, os.path.join(unrepaired_folder, file_name))

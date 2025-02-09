@@ -2,6 +2,7 @@ import os
 import subprocess
 import shutil
 from tqdm import tqdm
+import send2trash  # Add send2trash for sending files to recycle bin
 
 # Configurable settings
 TOOL_TEXT = "HandBrake 1.9.0 2024120100"  # Text to be written to the Tool tag
@@ -69,13 +70,13 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 if not verify_file_with_ffprobe(output_file_path):
                     print(f"\nError: Verification failed for '{output_file_path}'. Moving original file to 'failedconv'.")
                     failed_conversions.append(file)
-                    os.remove(output_file_path)  # Delete failed conversion
+                    send2trash.send2trash(output_file_path)  # Send failed conversion to recycle bin
                     shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))  # Move source file
                     continue
 
-                # If ffprobe is successful, delete the original file
-                os.remove(file)
-                print(f"\nConverted and removed original file: {file}")
+                # If ffprobe is successful, send the original file to recycle bin
+                send2trash.send2trash(file)
+                print(f"\nConverted and sent original file to recycle bin: {file}")
                 conversion_made = True
             except subprocess.CalledProcessError as e:
                 error_message = e.stderr.decode()
@@ -102,7 +103,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
         # Check if the tagged file already exists
         if os.path.exists(output_file):
             print(f"\nSkipping tagging, file already exists: {output_file}")
-            os.remove(file)  # Delete original file
+            send2trash.send2trash(file)  # Send original file to recycle bin
             continue
 
         escaped_tool_text = f'{TOOL_TEXT}'
@@ -112,7 +113,7 @@ def convert_and_tag_mp4(source_folder, destination_folder):
         try:
             subprocess.run(command, check=True)
             print(f"\nSuccess: Tagged file saved to '{output_file}'.")
-            os.remove(file)  # Delete original file after successful tagging
+            send2trash.send2trash(file)  # Send original file to recycle bin after successful tagging
         except subprocess.CalledProcessError as e:
             print(f"\nError: Failed to write the Tool tag for '{file}'. Error: {e}")
             failed_tagging_files.append(file)

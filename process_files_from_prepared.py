@@ -6,6 +6,7 @@ from tkinter import filedialog
 from tqdm import tqdm  # Add tqdm for progress bar
 import logging
 import sys
+import send2trash  # Add send2trash for sending files to recycle bin
 
 # Configurable settings
 LOG_FILE = 'process_errors.log'
@@ -45,17 +46,17 @@ def save_json(file_list_path, data):
         logging.error(f"Error updating JSON file: {e}")
 
 def delete_partial_file(file_path):
-    """Delete the file if it exists and is not fully copied."""
+    """Send the file to the recycle bin if it exists and is not fully copied."""
     if os.path.exists(file_path):
         try:
-            print(f"Deleting partial file: {file_path}")
-            os.remove(file_path)
+            print(f"Sending partial file to recycle bin: {file_path}")
+            send2trash.send2trash(file_path)
         except FileNotFoundError:
             logging.error(f"File not found: {file_path}")
         except PermissionError:
             logging.error(f"Permission denied: {file_path}")
         except Exception as e:
-            logging.error(f"Error deleting partial file {file_path}: {e}")
+            logging.error(f"Error sending partial file {file_path} to recycle bin: {e}")
 
 def copy_file_with_progress(src, dst):
     """Copy a file and show a progress bar for the current file copy."""
