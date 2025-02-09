@@ -58,11 +58,12 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 continue
 
             ffmpeg_command = [
-                "ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", "-map", "0", output_file_path
+                "ffmpeg", "-fflags", "+genpts", "-i", file, "-c:v", "copy", "-c:a", "copy", "-map", "0", output_file_path
             ]
 
             try:
-                subprocess.run(ffmpeg_command, check=True, stderr=subprocess.PIPE)
+                result = subprocess.run(ffmpeg_command, check=True, stderr=subprocess.PIPE)
+                result.check_returncode()
 
                 # Verify the output file using ffprobe
                 if not verify_file_with_ffprobe(output_file_path):
@@ -78,11 +79,15 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                 conversion_made = True
             except subprocess.CalledProcessError as e:
                 error_message = e.stderr.decode()
-                if "Could not find tag for codec subrip" in error_message:
+                print(f"\nFailed to convert file: {file}. Error: {error_message}. Moving to 'failedconv'.")
+                if "Could not find tag for codec subrip" in error_message or "Error opening output files: Encoder not found" in error_message:
                     print(f"\nRetrying conversion for file: {file} with subtitles re-encoded.")
-                    ffmpeg_command = ["ffmpeg", "-fflags", "+genpts", "-i", file, "-c", "copy", "-map", "0", "-c:s", "mov_text", output_file_path]
+                    ffmpeg_command = [
+                        "ffmpeg", "-fflags", "+genpts", "-i", file, "-c:v", "copy", "-c:a", "copy", "-map", "0", "-c:s", "mov_text", output_file_path
+                    ]
                     try:
-                        subprocess.run(ffmpeg_command, check=True)
+                        result = subprocess.run(ffmpeg_command, check=True, stderr=subprocess.PIPE)
+                        result.check_returncode()
                         # Verify the output file using ffprobe
                         if not verify_file_with_ffprobe(output_file_path):
                             print(f"\nError: Verification failed for '{output_file_path}'. Moving original file to 'failedconv'.")
@@ -94,11 +99,11 @@ def convert_and_tag_mp4(source_folder, destination_folder):
                         print(f"\nConverted and removed original file: {file}")
                         conversion_made = True
                     except subprocess.CalledProcessError as e:
-                        print(f"\nFailed to convert file: {file}. Error: {e}. Moving to 'failedconv'.")
+                        error_message = e.stderr.decode()
+                        print(f"\nFailed to convert file: {file}. Error: {error_message}. Moving to 'failedconv'.")
                         failed_conversions.append(file)
                         shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
                 else:
-                    print(f"\nFailed to convert file: {file}. Error: {e}. Moving to 'failedconv'.")
                     failed_conversions.append(file)
                     shutil.move(file, os.path.join(failed_folder, os.path.basename(file)))
             except Exception as e:
