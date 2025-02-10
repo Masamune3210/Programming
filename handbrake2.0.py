@@ -84,10 +84,19 @@ def tag_mp4(file_path):
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
     os.makedirs(os.path.join(source_folder, RETAG_FOLDER_NAME), exist_ok=True)
-    all_files = [(os.path.join(root, file), os.path.getsize(os.path.join(root, file)))
+    
+    non_mp4_files = [(os.path.join(root, file), os.path.getsize(os.path.join(root, file)))
+                     for root, _, files in os.walk(source_folder) for file in files
+                     if file.lower().endswith(SUPPORTED_EXTENSIONS)]
+    
+    mp4_files = [(os.path.join(root, file), os.path.getsize(os.path.join(root, file)))
                  for root, _, files in os.walk(source_folder) for file in files
-                 if file.lower().endswith(SUPPORTED_EXTENSIONS + ('.mp4',))]
-    all_files.sort(key=lambda x: x[1])
+                 if file.lower().endswith('.mp4')]
+    
+    non_mp4_files.sort(key=lambda x: x[1])
+    mp4_files.sort(key=lambda x: x[1])
+    
+    all_files = non_mp4_files + mp4_files
     
     for file_path, _ in tqdm(all_files, desc="Processing Files"):
         filename = os.path.basename(file_path)
@@ -111,7 +120,6 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                 send2trash.send2trash(file_path)
         else:
             print(f"Failed to encode: {file_path}")
-
 
 def main():
     source_folder = input("Enter the source folder path: ")
