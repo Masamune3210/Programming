@@ -84,12 +84,9 @@ def tag_mp4(file_path):
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
     os.makedirs(os.path.join(source_folder, RETAG_FOLDER_NAME), exist_ok=True)
-    
     allowed_folders = {"2160", "kids", ""}
-    
     non_mp4_files = []
     mp4_files = []
-    
     for root, _, files in os.walk(source_folder):
         relative_path = os.path.relpath(root, source_folder)
         if relative_path == ".":
@@ -102,17 +99,13 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                     non_mp4_files.append((file_path, file_size))
                 elif file.lower().endswith('.mp4'):
                     mp4_files.append((file_path, file_size))
-    
     non_mp4_files.sort(key=lambda x: x[1])
     mp4_files.sort(key=lambda x: x[1])
-    
     all_files = non_mp4_files + mp4_files
-    
     for file_path, _ in tqdm(all_files, desc="Processing Files"):
         filename = os.path.basename(file_path)
         preset_name = PRESETS.get("2160" if "2160" in file_path else "kids" if "kids" in file_path else "default")
         output_file = os.path.join(destination_folder, os.path.splitext(filename)[0] + ".mp4")
-        
         if encode_video(file_path, output_file, preset_name, handbrakecli_path):
             input_size = os.path.getsize(file_path)
             output_size = os.path.getsize(output_file)
@@ -121,11 +114,17 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                 retag_folder = os.path.join(source_folder, RETAG_FOLDER_NAME)
                 shutil.move(file_path, os.path.join(retag_folder, filename))
                 print(f"Moved to retag folder: {filename}")
+                # Handle conversion and tagging immediately
                 if not file_path.lower().endswith('.mp4'):
                     converted_file = os.path.join(retag_folder, os.path.splitext(filename)[0] + ".mp4")
                     if convert_to_mp4(os.path.join(retag_folder, filename), converted_file):
                         send2trash.send2trash(os.path.join(retag_folder, filename))
                         tag_mp4(converted_file)
+                    else:
+                        print(f"Failed to convert: {filename}")
+                        continue  # Skip to the next file if conversion fails
+                else:
+                    tag_mp4(file_path)
             else:
                 send2trash.send2trash(file_path)
         else:
@@ -139,7 +138,6 @@ def main():
         sys.exit(1)
     handbrakecli_path = find_handbrakecli()
     process_folder(source_folder, destination_folder, handbrakecli_path)
-
 
 if __name__ == "__main__":
     main()
