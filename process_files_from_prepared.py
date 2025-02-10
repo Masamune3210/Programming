@@ -137,7 +137,17 @@ def process_json(file_list_path, destination_folder):
         return
 
     files_to_copy = [f for f in files_to_copy if "file" in f and "size" in f]
-    files_to_copy.sort(key=lambda x: x['size'], reverse=False)
+
+    # Separate non-MP4 and MP4 files
+    non_mp4_files = [f for f in files_to_copy if not f["file"].lower().endswith('.mp4')]
+    mp4_files = [f for f in files_to_copy if f["file"].lower().endswith('.mp4')]
+
+    # Sort files by size (smallest to largest)
+    non_mp4_files.sort(key=lambda x: x['size'])
+    mp4_files.sort(key=lambda x: x['size'])
+
+    # Combine the lists with non-MP4 files first
+    files_to_copy = non_mp4_files + mp4_files
 
     free_space = get_free_space(destination_folder)
     if free_space == 0:
