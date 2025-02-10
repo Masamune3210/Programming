@@ -109,11 +109,16 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
         if encode_video(file_path, output_file, preset_name, handbrakecli_path):
             input_size = os.path.getsize(file_path)
             output_size = os.path.getsize(output_file)
-            if output_size >= input_size:
+            print(f"Size Check - Input: {input_size / (1024 * 1024):.2f} MB | Output: {output_size / (1024 * 1024):.2f} MB")
+            if output_size < input_size:
+                send2trash.send2trash(file_path)
+                print(f"✅ Sent input file to recycle bin {file_path} (output is smaller).")
+            else:
                 send2trash.send2trash(output_file)
                 retag_folder = os.path.join(source_folder, RETAG_FOLDER_NAME)
                 shutil.move(file_path, os.path.join(retag_folder, filename))
-                print(f"Moved to retag folder: {filename}")
+                print(f"⚠️ Output is not smaller. Moved {file_path} to 'retag' folder for review.")
+                
                 # Handle conversion and tagging immediately
                 if not file_path.lower().endswith('.mp4'):
                     converted_file = os.path.join(retag_folder, os.path.splitext(filename)[0] + ".mp4")
@@ -125,8 +130,6 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                         continue  # Skip to the next file if conversion fails
                 else:
                     tag_mp4(file_path)
-            else:
-                send2trash.send2trash(file_path)
         else:
             print(f"Failed to encode: {file_path}")
 
