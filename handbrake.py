@@ -164,8 +164,8 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                 all_files.append((file_path, file_size))
 
     if not all_files:
-        print("No files found to process. Exiting.")
-        return
+        print("No files found to process.")
+        return False
 
     # Separate non-MP4 and MP4 files
     non_mp4_files = [file for file in all_files if not file[0].lower().endswith('.mp4')]
@@ -206,6 +206,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
         file_progress.update(1)
 
     file_progress.close()
+    return True
 
 def main():
     source_folder = input("Enter the source folder path: ")
@@ -217,7 +218,9 @@ def main():
     handbrakecli_path = find_handbrakecli()
 
     while True:
-        process_folder(source_folder, destination_folder, handbrakecli_path)
+        if not process_folder(source_folder, destination_folder, handbrakecli_path):
+            print("No new files found. Exiting.")
+            break
         print("Waiting for new files to process...")
         time.sleep(60)  # Wait for 60 seconds before scanning the folder again
 
