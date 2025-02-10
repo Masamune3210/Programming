@@ -85,13 +85,23 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
     os.makedirs(os.path.join(source_folder, RETAG_FOLDER_NAME), exist_ok=True)
     
-    non_mp4_files = [(os.path.join(root, file), os.path.getsize(os.path.join(root, file)))
-                     for root, _, files in os.walk(source_folder) for file in files
-                     if file.lower().endswith(SUPPORTED_EXTENSIONS)]
+    allowed_folders = {"2160", "kids", ""}
     
-    mp4_files = [(os.path.join(root, file), os.path.getsize(os.path.join(root, file)))
-                 for root, _, files in os.walk(source_folder) for file in files
-                 if file.lower().endswith('.mp4')]
+    non_mp4_files = []
+    mp4_files = []
+    
+    for root, _, files in os.walk(source_folder):
+        relative_path = os.path.relpath(root, source_folder)
+        if relative_path == ".":
+            relative_path = ""
+        if relative_path.split(os.sep)[0] in allowed_folders:
+            for file in files:
+                file_path = os.path.join(root, file)
+                file_size = os.path.getsize(file_path)
+                if file.lower().endswith(SUPPORTED_EXTENSIONS):
+                    non_mp4_files.append((file_path, file_size))
+                elif file.lower().endswith('.mp4'):
+                    mp4_files.append((file_path, file_size))
     
     non_mp4_files.sort(key=lambda x: x[1])
     mp4_files.sort(key=lambda x: x[1])
