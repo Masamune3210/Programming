@@ -27,11 +27,9 @@ def find_handbrakecli():
         sys.exit(1)
     return HANDBRAKECLI_PATH
 
-
 def parse_progress(line):
     match = re.search(r'Encoding: task \d+ of \d+, (\d+\.\d+) %', line)
     return float(match.group(1)) if match else None
-
 
 def encode_video(input_file, output_file, preset_name, handbrakecli_path):
     global current_output_file, current_process
@@ -56,7 +54,6 @@ def encode_video(input_file, output_file, preset_name, handbrakecli_path):
     except subprocess.CalledProcessError:
         return False
 
-
 def convert_to_mp4(input_file, output_file):
     command = ["ffmpeg", "-fflags", "+genpts", "-i", input_file, "-c:v", "copy", "-c:a", "copy", "-map", "0:v", "-map", "0:a", output_file]
     try:
@@ -65,12 +62,10 @@ def convert_to_mp4(input_file, output_file):
     except subprocess.CalledProcessError:
         return False
 
-
 def verify_file_with_ffprobe(file_path):
     command = ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name", "-of", "default=noprint_wrappers=1:nokey=1", file_path]
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     return result.returncode == 0 and result.stdout.strip() != b''
-
 
 def tag_mp4(file_path):
     command = [MP4TAG_PATH, '--set', f'Tool:S:{TOOL_TEXT}', file_path]
@@ -80,6 +75,45 @@ def tag_mp4(file_path):
     except subprocess.CalledProcessError:
         print(f"Failed to tag: {file_path}")
 
+def cleanup_on_exit(signal, frame):
+    global current_output_file, current_process
+    print("\nProcess interrupted. Cleaning up...")
+
+    if current_process:
+        print(f"Attempting to terminate HandBrakeCLI (PID: {current_process.pid})...")
+        try:
+            current_process.terminate()
+            current_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            print("Process did not terminate in time. Forcing kill...")
+            kill_process(current_process)
+
+    if current_output_file and os.path.exists(current_output_file):
+        try:
+            send2trash.send2trash(current_output_file)
+            print(f"Sent partially encoded file to recycle bin: {current_output_file}")
+        except Exception as e:
+            print(f"Error sending partial file to recycle bin: {e}")
+
+    sys.exit(0)
+
+def kill_process(process):
+    if process is None:
+        return
+    
+    try:
+        proc = psutil.Process(process.pid)
+        for child in proc.children(recursive=True):
+            child.kill()
+        proc.kill()
+        proc.wait(5)
+        print(f"Forcefully killed HandBrakeCLI (PID: {process.pid})")
+    except psutil.NoSuchProcess:
+        print("HandBrakeCLI process already terminated.")
+    except Exception as e:
+        print(f"Error killing HandBrakeCLI: {e}")
+
+signal.signal(signal.SIGINT, cleanup_on_exit)
 
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
@@ -118,7 +152,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
                 retag_folder = os.path.join(source_folder, RETAG_FOLDER_NAME)
                 shutil.move(file_path, os.path.join(retag_folder, filename))
                 print(f"⚠️ Output is not smaller. Moved {file_path} to 'retag' folder for review.")
-                
+
                 # Handle conversion and tagging immediately
                 if not file_path.lower().endswith('.mp4'):
                     converted_file = os.path.join(retag_folder, os.path.splitext(filename)[0] + ".mp4")
