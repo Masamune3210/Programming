@@ -7,6 +7,7 @@ import psutil  # For force killing HandBrakeCLI if needed
 import re
 from tqdm import tqdm
 import send2trash  # Add send2trash for sending files to recycle bin
+import time
 
 # Configurable settings
 HANDBRAKECLI_DEFAULT_PATH = r"C:\\Tools\\handbrakecli"
@@ -214,7 +215,11 @@ def main():
         sys.exit(1)
 
     handbrakecli_path = find_handbrakecli()
-    process_folder(source_folder, destination_folder, handbrakecli_path)
+
+    while True:
+        process_folder(source_folder, destination_folder, handbrakecli_path)
+        print("Waiting for new files to process...")
+        time.sleep(60)  # Wait for 60 seconds before scanning the folder again
 
 if __name__ == "__main__":
     main()
