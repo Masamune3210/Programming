@@ -136,29 +136,6 @@ def convert_and_tag_mp4(source_folder, destination_folder):
             print(f"\nUnexpected error during tagging: {e}")
             failed_tagging_files.append(file)
 
-    # Organize files into subfolders of 99 files each
-    all_tagged_files = [file for file in os.listdir(destination_folder) if file.lower().endswith('.mp4')]
-    if len(all_tagged_files) > 99:
-        print("\nOrganizing files into folders of 99...")
-
-        folder_index = 1
-        current_folder = os.path.join(destination_folder, str(folder_index))
-        os.makedirs(current_folder, exist_ok=True)
-
-        file_count = 0
-        for file in tqdm(all_tagged_files, desc="Moving Files", unit="file"):
-            if file_count >= 99:
-                folder_index += 1
-                current_folder = os.path.join(destination_folder, str(folder_index))
-                os.makedirs(current_folder, exist_ok=True)
-                file_count = 0
-
-            shutil.move(os.path.join(destination_folder, file), os.path.join(current_folder, file))
-            print(f"\nMoved file: {file} to folder: {folder_index}")
-            file_count += 1
-    else:
-        print("\nLess than 100 files; skipping folder organization.")
-
     # Print summary of unprocessed files
     if unsupported_files:
         print("\nThe following unsupported files were not processed:")
