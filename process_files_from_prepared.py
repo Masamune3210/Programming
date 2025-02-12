@@ -7,6 +7,7 @@ from tqdm import tqdm  # Add tqdm for progress bar
 import logging
 import sys
 import send2trash  # Add send2trash for sending files to recycle bin
+import time  # Add time for sleep functionality
 
 # Configurable settings
 LOG_FILE = 'process_errors.log'
@@ -17,6 +18,7 @@ NON_ENGLISHJSON = 'non_english_audio.json'
 DEFAULT_SOURCE_DIR = 'E:\\'
 DEFAULT_JSON_DIR = 'G:\\Users\\Johnny\\Downloads\\Programming'
 DEFAULT_JSON_FILE = 'files_to_process.json'
+WAIT_TIME = 60  # Time to wait in seconds before checking free space again
 
 # Setup logging
 logging.basicConfig(filename=LOG_FILE, level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -149,28 +151,6 @@ def process_json(file_list_path, destination_folder):
     # Combine the lists with non-MP4 files first
     files_to_copy = non_mp4_files + mp4_files
 
-    free_space = get_free_space(destination_folder)
-    if free_space == 0:
-        print("Unable to determine free space or insufficient permissions.")
-        return
-
-    total_space_needed = 0
-    eligible_files = []
-    for file_entry in files_to_copy:
-        file_size = file_entry['size']
-        if total_space_needed + file_size + EXTRA_SPACE_REQUIRED <= free_space:
-            eligible_files.append(file_entry)
-            total_space_needed += file_size
-        else:
-            break
-
-    if not eligible_files:
-        print(f"Not enough space to copy any files. Free space: {free_space / (1024**3):.2f} GB")
-        return
-
-    print(f"Free space: {free_space / (1024**3):.2f} GB")
-    print(f"Space required for {len(eligible_files)} files: {total_space_needed / (1024**3):.2f} GB")
-
     # Check if the JSON file is named non_english_audio.json
     is_non_english_audio = os.path.basename(file_list_path) == NON_ENGLISHJSON
 
@@ -189,8 +169,8 @@ def process_json(file_list_path, destination_folder):
     current_file_entry = None  # To store the current file entry in the list
 
     try:
-        with tqdm(total=len(eligible_files), desc="Processing files", unit="file") as pbar:
-            for file_entry in eligible_files[:]:
+        with tqdm(total=len(files_to_copy), desc="Processing files", unit="file") as pbar:
+            for file_entry in files_to_copy:
                 file_path = file_entry["file"]
                 file_name = os.path.basename(file_path)
                 file_size = file_entry["size"]
@@ -217,6 +197,10 @@ def process_json(file_list_path, destination_folder):
                     remaining_files.remove(file_entry)
                     processed_count += 1
                 else:
+                    while get_free_space(destination_folder) < file_size + 200 * 1024 * 1024:
+                        print(f"\nWaiting for enough space to copy {file_name}...")
+                        time.sleep(WAIT_TIME)
+
                     try:
                         if is_non_english_audio:
                             print(f"\nMoving: {file_name} → {dest_path}")
