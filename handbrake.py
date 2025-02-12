@@ -8,6 +8,7 @@ import re
 from tqdm import tqdm
 import send2trash  # Add send2trash for sending files to recycle bin
 import time
+import msvcrt  # For detecting keyboard strokes on Windows
 
 # Configurable settings
 HANDBRAKECLI_DEFAULT_PATH = r"C:\\Tools\\handbrakecli"
@@ -206,6 +207,22 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
         file_progress.update(1)
 
     file_progress.close()
+
+    # Beep, wait, and hibernate logic
+    print("\a")  # Beep
+    time.sleep(120)  # Wait for 2 minutes
+    print("\a")  # Beep again
+
+    print("Press any key to cancel hibernation...")
+    start_time = time.time()
+    while time.time() - start_time < 60:  # Wait for 1 minute for a key press
+        if msvcrt.kbhit():
+            print("Hibernation cancelled.")
+            return True
+
+    print("Hibernating...")
+    os.system("shutdown /h")  # Hibernate the computer
+
     return True
 
 def main():
