@@ -168,6 +168,8 @@ def process_json(file_list_path, destination_folder):
     current_file_path = None  # To store the current file being processed
     current_file_entry = None  # To store the current file entry in the list
 
+    is_processing = False  # Variable to track if a copy or move operation is being performed
+
     try:
         with tqdm(total=len(files_to_copy), desc="Processing files", unit="file") as pbar:
             for file_entry in files_to_copy:
@@ -202,6 +204,7 @@ def process_json(file_list_path, destination_folder):
                         time.sleep(WAIT_TIME)
 
                     try:
+                        is_processing = True  # Set to True before starting the operation
                         if is_non_english_audio:
                             print(f"\nMoving: {file_name} → {dest_path}")
                             current_file_path = dest_path  # Store the current destination path of the file being moved
@@ -219,10 +222,12 @@ def process_json(file_list_path, destination_folder):
                         # If copy or move was successful, remove the file from the remaining list
                         remaining_files.remove(file_entry)
                         processed_count += 1
+                        is_processing = False  # Set to False after the operation is complete
 
                     except Exception as e:
                         logging.error(f"Error processing {file_name}: {e}")
                         delete_partial_file(current_file_path)  # Delete the partial file at the current destination
+                        is_processing = False  # Set to False if an error occurs
                         continue
 
                 pbar.update(1)
@@ -231,7 +236,7 @@ def process_json(file_list_path, destination_folder):
     except KeyboardInterrupt:
         print("\nProcess interrupted. Saving progress...")
         # Clean up: delete the partially processed file if it was being processed
-        if current_file_path and os.path.exists(current_file_path):
+        if is_processing and current_file_path and os.path.exists(current_file_path):
             print(f"Deleting partially processed file: {current_file_path}")
             os.remove(current_file_path)
         logging.shutdown()
