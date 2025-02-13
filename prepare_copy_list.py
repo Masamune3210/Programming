@@ -171,9 +171,12 @@ def main():
 
     # Add new files to the list if they are not already present
     existing_files_set = {file_info["file"] for file_info in existing_data["files"]}
+    skipped_files_count = 0
     for file_info in files_to_process:
         if file_info["file"] not in existing_files_set:
             existing_data["files"].append(file_info)
+        else:
+            skipped_files_count += 1
 
     # Save valid files to process
     save_json(existing_data, OUTPUT_FILE)
@@ -184,6 +187,7 @@ def main():
 
     print(f"List of {len(files_to_process)} files to process saved to {OUTPUT_FILE}")
     print(f"List of {len(broken_files)} broken files saved to {BROKEN_FILE_OUTPUT}")
+    print(f"Skipped {skipped_files_count} files that were already in the JSON.")
     print("Processing complete.")
 
 if __name__ == "__main__":
