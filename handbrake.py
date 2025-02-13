@@ -18,6 +18,7 @@ PRESETS = {
     "default": "1080p4"
 }
 EXCLUDED_DIRS = ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored"]
+GAME_FOLDERS = ["D:\\Games", "E:\\Games", "D:\\GOG Games", "D:\\XboxGames", "F:\Emulation\\Emulators", "F:\\Games", "F:\\XboxGames", "G:\\Games", "G:\\SteamLibrary", "G:\\XboxGames"]  # Add paths to game folders here
 
 current_output_file = None
 current_process = None  # Track HandBrakeCLI process
@@ -69,8 +70,7 @@ def cleanup_on_exit(signal, frame):
             print(f"Error sending partial file to recycle bin: {e}")
 
     sys.exit(0)
-
-signal.signal(signal.SIGINT, cleanup_on_exit)
+    signal.signal(signal.SIGINT, cleanup_on_exit)
 
 def parse_progress(line):
     """Extracts encoding progress from HandBrakeCLI output."""
@@ -149,6 +149,18 @@ def get_preset_for_file(file_path, source_folder):
     else:
         return PRESETS["default"]
 
+def is_game_running():
+    """Check if any executable from the specified game folders is running."""
+    for proc in psutil.process_iter(['pid', 'name', 'exe']):
+        try:
+            if proc.info['exe']:
+                for game_folder in GAME_FOLDERS:
+                    if proc.info['exe'].startswith(game_folder):
+                        return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return False
+
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
 
@@ -180,6 +192,12 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
 
     # Process non-MP4 files first
     for file_path, _ in non_mp4_files:
+        if is_game_running():
+            print("Game detected. Pausing processing...")
+            while is_game_running():
+                time.sleep(10)  # Check every 10 seconds
+            print("Game exited. Resuming processing...")
+
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
         output_file = os.path.join(destination_folder, os.path.splitext(filename)[0] + ".mp4")
@@ -194,6 +212,12 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
 
     # Process MP4 files next
     for file_path, _ in mp4_files:
+        if is_game_running():
+            print("Game detected. Pausing processing...")
+            while is_game_running():
+                time.sleep(10)  # Check every 10 seconds
+            print("Game exited. Resuming processing...")
+
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
         output_file = os.path.join(destination_folder, filename)
@@ -223,6 +247,12 @@ def main():
     handbrakecli_path = find_handbrakecli()
 
     while True:
+        if is_game_running():
+            print("\nGame detected. Pausing processing...")
+            while is_game_running():
+                time.sleep(10)  # Check every 10 seconds
+            print("\nGame exited. Resuming processing...")
+
         if not process_folder(source_folder, destination_folder, handbrakecli_path):
             print("No new files found. Exiting.")
             # Beep, wait, and hibernate logic
