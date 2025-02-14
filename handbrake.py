@@ -147,6 +147,7 @@ def handle_file(input_file, output_file, source_folder):
                 handle_encoding_error(input_file, source_folder)
                 print(f"⚠️ Output has no audio. Moved {input_file} to 'errored' folder for review.")
             else:
+                send2trash.send2trash(output_file)
                 retag_folder = os.path.join(source_folder, "retag")
                 os.makedirs(retag_folder, exist_ok=True)
                 shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
