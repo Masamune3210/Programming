@@ -12,7 +12,7 @@ def is_non_english_audio(file_path):
             text=True
         )
         language = result.stdout.strip()
-        return language != 'eng'
+        return language not in ['eng', 'und']
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
         return False
