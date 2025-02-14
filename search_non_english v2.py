@@ -11,8 +11,8 @@ def is_non_english_audio(file_path):
             stderr=subprocess.PIPE,
             text=True
         )
-        language = result.stdout.strip()
-        return language not in ['eng', 'und']
+        languages = result.stdout.strip().split('\n')
+        return all(language not in ['eng', 'und'] for language in languages)
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
         return False
