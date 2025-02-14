@@ -17,12 +17,18 @@ def is_non_english_audio(file_path):
         print(f"Error processing {file_path}: {e}")
         return False
 
+def is_media_file(file_path):
+    media_extensions = {'.mp4', '.mkv', '.avi', '.mov', '.flv', '.wmv', '.mpg', '.mpeg', '.mov', '.3gp', '.webm'}
+    return os.path.splitext(file_path)[1].lower() in media_extensions
+
 def find_non_english_files(folder_path):
     non_english_files = []
     all_files = []
     for root, _, files in os.walk(folder_path):
         for file in files:
-            all_files.append(os.path.join(root, file))
+            file_path = os.path.join(root, file)
+            if is_media_file(file_path):
+                all_files.append(file_path)
     
     existing_files = set()
     if os.path.exists('non_english_audio.json'):
