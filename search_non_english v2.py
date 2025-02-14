@@ -1,6 +1,7 @@
 import os
 import json
 import subprocess
+from tqdm import tqdm
 
 def is_non_english_audio(file_path):
     try:
@@ -18,22 +19,32 @@ def is_non_english_audio(file_path):
 
 def find_non_english_files(folder_path):
     non_english_files = []
+    all_files = []
     for root, _, files in os.walk(folder_path):
         for file in files:
-            file_path = os.path.join(root, file)
+            all_files.append(os.path.join(root, file))
+    
+    with open('non_english_files.json', 'w') as json_file:
+        json_file.write('{"files": [\n')
+        first_entry = True
+        for file_path in tqdm(all_files, desc="Processing files"):
             if is_non_english_audio(file_path):
                 file_info = {
                     "file": file_path,
                     "size": os.path.getsize(file_path)
                 }
-                non_english_files.append(file_info)
+                if not first_entry:
+                    json_file.write(',\n')
+                json.dump(file_info, json_file, indent=4)
+                json_file.flush()
+                first_entry = False
+        json_file.write('\n]}')
+    
     return non_english_files
 
 def main():
     folder_path = input("Enter the folder path: ")
     non_english_files = find_non_english_files(folder_path)
-    with open('non_english_files.json', 'w') as json_file:
-        json.dump({"files": non_english_files}, json_file, indent=4)
     print(f"Found {len(non_english_files)} non-English audio files. Results saved to non_english_files.json")
 
 if __name__ == "__main__":
