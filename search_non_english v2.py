@@ -24,7 +24,7 @@ def find_non_english_files(folder_path):
         for file in files:
             all_files.append(os.path.join(root, file))
     
-    with open('non_english_files.json', 'w') as json_file:
+    with open('non_english_audio.json', 'w') as json_file:
         json_file.write('{"files": [\n')
         first_entry = True
         for file_path in tqdm(all_files, desc="Processing files"):
