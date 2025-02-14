@@ -45,9 +45,9 @@ def find_non_english_files(folder_path):
             }
             non_english_files.append(file_info)
             existing_data["files"].append(file_info)
-    
-    with open('non_english_audio.json', 'w') as json_file:
-        json.dump(existing_data, json_file, indent=4)
+            with open('non_english_audio.json', 'w') as json_file:
+                json.dump(existing_data, json_file, indent=4)
+                json_file.flush()
     
     return non_english_files
 
