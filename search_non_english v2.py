@@ -26,10 +26,14 @@ def find_non_english_files(folder_path):
     
     existing_files = set()
     if os.path.exists('non_english_audio.json'):
-        with open('non_english_audio.json', 'r') as json_file:
-            existing_data = json.load(json_file)
-            non_english_files = existing_data.get("files", [])
-            existing_files = {file_info["file"] for file_info in non_english_files}
+        try:
+            with open('non_english_audio.json', 'r') as json_file:
+                existing_data = json.load(json_file)
+                non_english_files = existing_data.get("files", [])
+                existing_files = {file_info["file"] for file_info in non_english_files}
+        except json.JSONDecodeError:
+            print("Error reading JSON file. Assuming the file is damaged and overwriting it.")
+            existing_data = {"files": []}
     else:
         existing_data = {"files": []}
     
