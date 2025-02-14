@@ -174,13 +174,12 @@ def process_json(file_list_path, destination_folder):
     # Check if the JSON file is named non_english_audio.json
     is_non_english_audio = os.path.basename(file_list_path) == NON_ENGLISHJSON
 
-    if not is_non_english_audio:
-        retag_folder = os.path.join(destination_folder, "retag")
-        os.makedirs(retag_folder, exist_ok=True)
-        twenty_folder = os.path.join(destination_folder, "2160")
-        os.makedirs(twenty_folder, exist_ok=True)
-        kids_folder = os.path.join(destination_folder, "kids")
-        os.makedirs(kids_folder, exist_ok=True)
+    retag_folder = os.path.join(destination_folder, "retag")
+    os.makedirs(retag_folder, exist_ok=True)
+    twenty_folder = os.path.join(destination_folder, "2160")
+    os.makedirs(twenty_folder, exist_ok=True)
+    kids_folder = os.path.join(destination_folder, "kids")
+    os.makedirs(kids_folder, exist_ok=True)
 
     processed_count = 0
     remaining_files = list(files_to_copy)
