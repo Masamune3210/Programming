@@ -117,6 +117,19 @@ def encode_video(input_file, output_file, preset_name, handbrakecli_path):
         print(f"Error encoding video {input_file}: {e}")
         return False
 
+def check_audio_tracks(file_path):
+    """Check if the file has at least one audio track using ffprobe."""
+    command = [
+        "ffprobe",
+        "-v", "error",
+        "-select_streams", "a",
+        "-show_entries", "stream=index",
+        "-of", "csv=p=0",
+        file_path
+    ]
+    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    return bool(result.stdout.strip())
+
 def handle_file(input_file, output_file, source_folder):
     if os.path.exists(output_file):
         input_size = os.path.getsize(input_file)
@@ -124,16 +137,19 @@ def handle_file(input_file, output_file, source_folder):
 
         print(f"Size Check - Input: {input_size / (1024 * 1024):.2f} MB | Output: {output_size / (1024 * 1024):.2f} MB")
 
-        if output_size < input_size:
+        if output_size < input_size and check_audio_tracks(output_file):
             send2trash.send2trash(input_file)
-            print(f"✅ Sent input file to recycle bin {input_file} (output is smaller).")
+            print(f"✅ Sent input file to recycle bin {input_file} (output is smaller and has audio).")
         else:
-            send2trash.send2trash(output_file)
-            retag_folder = os.path.join(source_folder, "retag")
-            os.makedirs(retag_folder, exist_ok=True)
-            shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
-            print(f"⚠️ Output is not smaller. Moved {input_file} to 'retag' folder for review.")
-
+            if not check_audio_tracks(output_file):
+                send2trash.send2trash(output_file)
+                handle_encoding_error(input_file, source_folder)
+                print(f"⚠️ Output has no audio. Moved {input_file} to 'errored' folder for review.")
+            else:
+                retag_folder = os.path.join(source_folder, "retag")
+                os.makedirs(retag_folder, exist_ok=True)
+                shutil.move(input_file, os.path.join(retag_folder, os.path.basename(input_file)))
+                print(f"⚠️ Output is not smaller. Moved {input_file} to 'retag' folder for review.")
 def handle_encoding_error(input_file, source_folder):
     errored_folder = os.path.join(source_folder, "errored")
     os.makedirs(errored_folder, exist_ok=True)
