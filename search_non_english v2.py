@@ -6,7 +6,7 @@ from tqdm import tqdm
 def is_non_english_audio(file_path):
     try:
         result = subprocess.run(
-            ['ffprobe', '-v', 'error', '-show_entries', 'stream_tags=language', '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
+            ['ffprobe', '-v', 'error', '-select_streams', 'a', '-show_entries', 'stream_tags=language', '-of', 'default=noprint_wrappers=1:nokey=1', file_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True
