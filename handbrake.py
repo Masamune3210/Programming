@@ -72,7 +72,8 @@ def cleanup_on_exit(signal, frame):
             print(f"Error sending partial file to recycle bin: {e}")
 
     sys.exit(0)
-    signal.signal(signal.SIGINT, cleanup_on_exit)
+
+signal.signal(signal.SIGINT, cleanup_on_exit)
 
 def parse_progress(line):
     """Extracts encoding progress from HandBrakeCLI output."""
