@@ -31,30 +31,26 @@ def find_non_english_files(folder_path):
             non_english_files = existing_data.get("files", [])
             existing_files = {file_info["file"] for file_info in non_english_files}
     else:
-        with open('non_english_audio.json', 'w') as json_file:
-            json_file.write('{"files": [\n')
+        existing_data = {"files": []}
     
-    with open('non_english_audio.json', 'a') as json_file:
-        first_entry = len(non_english_files) == 0
-        for file_path in tqdm(all_files, desc="Processing files"):
-            if file_path not in existing_files and is_non_english_audio(file_path):
-                file_info = {
-                    "file": file_path,
-                    "size": os.path.getsize(file_path)
-                }
-                if not first_entry:
-                    json_file.write(',\n')
-                json.dump(file_info, json_file, indent=4)
-                json_file.flush()
-                first_entry = False
-        json_file.write('\n]}')
+    for file_path in tqdm(all_files, desc="Processing files"):
+        if file_path not in existing_files and is_non_english_audio(file_path):
+            file_info = {
+                "file": file_path,
+                "size": os.path.getsize(file_path)
+            }
+            non_english_files.append(file_info)
+            existing_data["files"].append(file_info)
+    
+    with open('non_english_audio.json', 'w') as json_file:
+        json.dump(existing_data, json_file, indent=4)
     
     return non_english_files
 
 def main():
     folder_path = input("Enter the folder path: ")
     non_english_files = find_non_english_files(folder_path)
-    print(f"Found {len(non_english_files)} non-English audio files. Results saved to non_english_files.json")
+    print(f"Found {len(non_english_files)} non-English audio files. Results saved to non_english_audio.json")
 
 if __name__ == "__main__":
     main()
