@@ -213,10 +213,10 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
     # Process non-MP4 files first
     for file_path, _ in non_mp4_files:
         if is_game_running():
-            print("Game detected. Pausing processing...")
+            print("\nGame detected. Pausing processing...")
             while is_game_running():
                 time.sleep(10)  # Check every 10 seconds
-            print("Game exited. Resuming processing...")
+            print("\nGame exited. Resuming processing...")
 
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
