@@ -285,7 +285,10 @@ def main():
                 if msvcrt.kbhit():
                     print("Hibernation cancelled.")
                     return True
-            break
+            print("Hibernating...")
+            os.system("shutdown /h")  # Hibernate the computer
+            return True
+
         print("Waiting for new files to process...")
         time.sleep(60)  # Wait for 60 seconds before scanning the folder again
 
