@@ -26,8 +26,8 @@ def organize_files(base_folder):
         return
     
     # Regex patterns to match the specified naming schemes
-    single_episode_pattern = re.compile(r"^(.*?) - S(\d+)E(\d+) - .*?\.(\w+)$")
-    multiple_episode_pattern = re.compile(r"^(.*?) - S(\d+)E(\d+(-E\d+)?) - .*?\.(\w+)$")
+    single_episode_pattern = re.compile(r"^(.*?) - S(\d+)E(\d+) - .*?\.(\w+)$", re.IGNORECASE)
+    multiple_episode_pattern = re.compile(r"^(.*?) - S(\d+)E(\d+(-E\d+)?) - .*?\.(\w+)$", re.IGNORECASE)
     
     files = [f for f in os.listdir(base_folder) if os.path.isfile(os.path.join(base_folder, f))]
     files.sort(key=lambda x: os.path.getmtime(os.path.join(base_folder, x)), reverse=True)
