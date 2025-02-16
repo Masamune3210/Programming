@@ -107,44 +107,34 @@ def convert_and_tag_mp4(source_folder, destination_folder):
         else:
             break
 
-    while True:
-        # Remove 0KB files from the destination folder
-        remove_0kb_files(destination_folder)
+    # Remove 0KB files from the destination folder
+    remove_0kb_files(destination_folder)
 
-        # Tag all MP4 files (excluding failed conversions)
-        all_mp4_files = [file for file in all_files if file.lower().endswith('.mp4')]
-        conversion_made = False
-        for file in tqdm(all_mp4_files, desc="Tagging Files", unit="file"):
-            output_file = os.path.join(destination_folder, os.path.basename(file))
+    # Tag all MP4 files (excluding failed conversions)
+    all_mp4_files = [file for file in all_files if file.lower().endswith('.mp4')]
+    for file in tqdm(all_mp4_files, desc="Tagging Files", unit="file"):
+        output_file = os.path.join(destination_folder, os.path.basename(file))
 
-            # Check if the tagged file already exists
-            if os.path.exists(output_file):
-                print(f"\nSkipping tagging, file already exists: {output_file}")
-                send2trash.send2trash(file)  # Send original file to recycle bin
-                continue
-
-            escaped_tool_text = f'{TOOL_TEXT}'
-            command = [MP4TAG_PATH, '--set', f'Tool:S:{escaped_tool_text}', file, output_file]
-
-            print(f"\nTagging file: {file}")
-            try:
-                subprocess.run(command, check=True)
-                print(f"\nSuccess: Tagged file saved to '{output_file}'.")
-                send2trash.send2trash(file)  # Send original file to recycle bin after successful tagging
-                conversion_made = True
-            except subprocess.CalledProcessError as e:
-                print(f"\nError: Failed to write the Tool tag for '{file}'. Error: {e}")
-                failed_tagging_files.append(file)
-            except Exception as e:
-                print(f"\nUnexpected error during tagging: {e}")
-                failed_tagging_files.append(file)
-
-        # Restart the loop if any files were tagged
-        if conversion_made:
-            print("\nRescanning the folder for newly tagged files...")
+        # Check if the tagged file already exists
+        if os.path.exists(output_file):
+            print(f"\nSkipping tagging, file already exists: {output_file}")
+            send2trash.send2trash(file)  # Send original file to recycle bin
             continue
-        else:
-            break
+
+        escaped_tool_text = f'{TOOL_TEXT}'
+        command = [MP4TAG_PATH, '--set', f'Tool:S:{escaped_tool_text}', file, output_file]
+
+        print(f"\nTagging file: {file}")
+        try:
+            subprocess.run(command, check=True)
+            print(f"\nSuccess: Tagged file saved to '{output_file}'.")
+            send2trash.send2trash(file)  # Send original file to recycle bin after successful tagging
+        except subprocess.CalledProcessError as e:
+            print(f"\nError: Failed to write the Tool tag for '{file}'. Error: {e}")
+            failed_tagging_files.append(file)
+        except Exception as e:
+            print(f"\nUnexpected error during tagging: {e}")
+            failed_tagging_files.append(file)
 
     # Print summary of unprocessed files
     if unsupported_files:
