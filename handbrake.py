@@ -252,9 +252,6 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
 
     file_progress.close()
 
-    print("Hibernating...")
-    os.system("shutdown /h")  # Hibernate the computer
-
     return True
 
 def main():
@@ -275,18 +272,6 @@ def main():
 
         if not process_folder(source_folder, destination_folder, handbrakecli_path):
             print("No new files found. Exiting.")
-            # Beep, wait, and hibernate logic
-            print("\a")  # Beep
-            time.sleep(120)  # Wait for 2 minutes
-            print("\a")  # Beep again
-            print("Press any key to cancel hibernation...")
-            start_time = time.time()
-            while time.time() - start_time < 60:  # Wait for 1 minute for a key press
-                if msvcrt.kbhit():
-                    print("Hibernation cancelled.")
-                    return True
-            print("Hibernating...")
-            os.system("ver")  # Hibernate the computer
             return True
 
         print("Waiting for new files to process...")
