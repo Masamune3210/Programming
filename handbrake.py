@@ -286,7 +286,7 @@ def main():
                     print("Hibernation cancelled.")
                     return True
             print("Hibernating...")
-            os.system("shutdown /h")  # Hibernate the computer
+            os.system("ver")  # Hibernate the computer
             return True
 
         print("Waiting for new files to process...")
