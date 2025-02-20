@@ -188,7 +188,7 @@ def wait_for_game_exit():
         if msvcrt.kbhit() and msvcrt.getch().lower() == b'c':
             print("\nContinuing processing despite game running.")
             break
-        time.sleep(10)  # Check every 10 seconds
+        time.sleep(1)  # Check every second
     else:
         print("\nGame exited. Resuming processing...")
 
