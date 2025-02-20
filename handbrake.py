@@ -19,7 +19,7 @@ PRESETS = {
 }
 EXCLUDED_DIRS = ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored", "non-eng"]
 GAME_FOLDERS = ["D:\\Games", "E:\\Games", "D:\\GOG Games", "D:\\XboxGames",
-                 "F:\Emulation\\Emulators", "F:\\Games", "F:\\XboxGames", "G:\\Games",
+                 "F:\\Emulation\\Emulators", "F:\\Games", "F:\\XboxGames", "G:\\Games",
                    "G:\\SteamLibrary", "G:\\XboxGames"]  # Add paths to game folders here
 
 current_output_file = None
@@ -181,6 +181,17 @@ def is_game_running():
             pass
     return False
 
+def wait_for_game_exit():
+    """Wait for the game to exit or for the user to press 'c' to continue."""
+    print("\nGame detected. Pausing processing... Press 'c' to continue anyway.")
+    while is_game_running():
+        if msvcrt.kbhit() and msvcrt.getch().lower() == b'c':
+            print("\nContinuing processing despite game running.")
+            break
+        time.sleep(10)  # Check every 10 seconds
+    else:
+        print("\nGame exited. Resuming processing...")
+
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
 
@@ -213,10 +224,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
     # Process non-MP4 files first
     for file_path, _ in non_mp4_files:
         if is_game_running():
-            print("\nGame detected. Pausing processing...")
-            while is_game_running():
-                time.sleep(10)  # Check every 10 seconds
-            print("\nGame exited. Resuming processing...")
+            wait_for_game_exit()
 
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
@@ -233,10 +241,7 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
     # Process MP4 files next
     for file_path, _ in mp4_files:
         if is_game_running():
-            print("Game detected. Pausing processing...")
-            while is_game_running():
-                time.sleep(10)  # Check every 10 seconds
-            print("Game exited. Resuming processing...")
+            wait_for_game_exit()
 
         filename = os.path.basename(file_path)
         preset_name = get_preset_for_file(file_path, source_folder)
@@ -265,10 +270,7 @@ def main():
 
     while True:
         if is_game_running():
-            print("\nGame detected. Pausing processing...")
-            while is_game_running():
-                time.sleep(10)  # Check every 10 seconds
-            print("\nGame exited. Resuming processing...")
+            wait_for_game_exit()
 
         if not process_folder(source_folder, destination_folder, handbrakecli_path):
             print("No new files found. Exiting.")
