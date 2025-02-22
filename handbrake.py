@@ -110,13 +110,14 @@ def encode_video(input_file, output_file, preset_name, handbrakecli_path):
 
         if process.returncode != 0:
             raise subprocess.CalledProcessError(process.returncode, command)
-            send2trash.send2trash(output_file)
 
         print(f"Encoding complete: {output_file}")
         return True
 
     except subprocess.CalledProcessError as e:
         print(f"Error encoding video {input_file}: {e}")
+        send2trash.send2trash(output_file)
+        print(f"\nSent partially encoded file to recycle bin: {output_file}")
         return False
 
 def check_audio_tracks(file_path):
