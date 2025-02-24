@@ -56,8 +56,8 @@ def load_existing_data(output_file):
                 return json.load(f)
         except json.JSONDecodeError:
             print("[ERROR] JSON file is corrupt. Starting fresh.")
-            return {"encoder": "", "files": []}
-    return {"encoder": "", "files": []}
+            return {"encoder": "", "ignored_encoders": [], "files": []}
+    return {"encoder": "", "ignored_encoders": [], "files": []}
 
 def save_json(data, json_file):
     """Save data to a JSON file."""
@@ -67,7 +67,7 @@ def save_json(data, json_file):
     except Exception as e:
         print(f"Error saving JSON file: {e}")
 
-def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
+def filter_files(video_files, broken_files, file_encoder_map, selected_encoder, ignored_encoders):
     """Filter files that need processing based on encoder and file type."""
     files_to_process = []
 
@@ -77,6 +77,9 @@ def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
         
         file_extension = os.path.splitext(file)[1]
         file_encoder = file_encoder_map.get(file)
+
+        if file_encoder in ignored_encoders:
+            continue  # Skip files with ignored encoders
 
         if file_extension == ".mp4":
             if file_encoder and file_encoder != selected_encoder:
@@ -88,7 +91,7 @@ def filter_files(video_files, broken_files, file_encoder_map, selected_encoder):
 
     return files_to_process
 
-def filter_existing_files(existing_files, file_encoder_map, selected_encoder):
+def filter_existing_files(existing_files, file_encoder_map, selected_encoder, ignored_encoders):
     """Filter existing files to ensure they still qualify for being in the list."""
     valid_files = []
     removed_files_count = 0
@@ -96,6 +99,10 @@ def filter_existing_files(existing_files, file_encoder_map, selected_encoder):
         file_path = file_info["file"]
         file_extension = os.path.splitext(file_path)[1]
         file_encoder = get_video_encoder(file_path)  # Recheck encoder
+
+        if file_encoder in ignored_encoders:
+            removed_files_count += 1
+            continue  # Skip files with ignored encoders
 
         if os.path.exists(file_path):
             if file_extension == ".mp4":
@@ -130,13 +137,15 @@ def main():
     existing_data = load_existing_data(OUTPUT_FILE)
     broken_data = load_existing_data(BROKEN_FILE_OUTPUT)
     
+    ignored_encoders = existing_data.get("ignored_encoders", [])
+
     if existing_data["encoder"]:
         selected_encoder = existing_data["encoder"]
         print(f"Using existing encoder from file: {selected_encoder}")
         video_files = [file_info["file"] for file_info in existing_data["files"]]
         broken_files = broken_data["files"]
         file_encoder_map = {file_info["file"]: selected_encoder for file_info in existing_data["files"]}
-        existing_data["files"], removed_files_count = filter_existing_files(existing_data["files"], file_encoder_map, selected_encoder)
+        existing_data["files"], removed_files_count = filter_existing_files(existing_data["files"], file_encoder_map, selected_encoder, ignored_encoders)
         print(f"Removed {removed_files_count} files from existing JSON.")
         
         # Flush updated JSON to disk
@@ -165,7 +174,7 @@ def main():
             return
 
     print(f"Filtering files using encoder: {selected_encoder}")
-    files_to_process = filter_files(video_files, broken_files, file_encoder_map, selected_encoder)
+    files_to_process = filter_files(video_files, broken_files, file_encoder_map, selected_encoder, ignored_encoders)
 
     existing_data["encoder"] = selected_encoder
 
