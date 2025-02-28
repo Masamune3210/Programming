@@ -5,7 +5,7 @@ from tqdm import tqdm
 import send2trash  # Add send2trash for sending files to recycle bin
 
 # Configurable settings
-TOOL_TEXT = "HandBrake 1.9.0 2024120100"  # Text to be written to the Tool tag
+TOOL_TEXT = "HandBrake 1.9.2 2025022300"  # Text to be written to the Tool tag
 MP4TAG_PATH = r"C:\\Tools\\mp4tag\\mp4tag.exe"  # Path to the mp4tag executable
 SUPPORTED_EXTENSIONS = ('.mkv', '.webm', '.avi', '.mpg')
 FAILED_FOLDER_NAME = "failedconv"
