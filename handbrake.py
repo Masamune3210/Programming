@@ -24,6 +24,7 @@ GAME_FOLDERS = ["D:\\Games", "E:\\Games", "D:\\GOG Games", "D:\\XboxGames",
 
 current_output_file = None
 current_process = None  # Track HandBrakeCLI process
+ignored_game_folders = set()  # Track ignored game folders
 
 def find_handbrakecli():
     handbrakecli_path = HANDBRAKECLI_DEFAULT_PATH
@@ -171,28 +172,48 @@ def get_preset_for_file(file_path, source_folder):
     else:
         return PRESETS["default"]
 
+def wait_for_game_exit():
+    """Wait for the game to exit or for the user to press 'c' to continue or 'x' to ignore the current game folder."""
+    print("\nGame detected. Pausing processing... Press 'c' to continue anyway or 'x' to ignore the current game folder.")
+    while is_game_running():
+        if msvcrt.kbhit():
+            key = msvcrt.getch().lower()
+            if key == b'c':
+                print("\nContinuing processing despite game running.")
+                break
+            elif key == b'x':
+                current_game_folder = get_current_game_folder()
+                if current_game_folder:
+                    ignored_game_folders.add(current_game_folder)
+                    print(f"\nIgnoring game folder: {current_game_folder}")
+                break
+        time.sleep(1)  # Check every second
+    else:
+        print("\nGame exited. Resuming processing...")
+
+def get_current_game_folder():
+    """Get the folder of the currently running game."""
+    for proc in psutil.process_iter(['pid', 'name', 'exe']):
+        try:
+            if proc.info['exe']:
+                for game_folder in GAME_FOLDERS:
+                    if proc.info['exe'].startswith(game_folder):
+                        return game_folder
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return None
+
 def is_game_running():
     """Check if any executable from the specified game folders is running."""
     for proc in psutil.process_iter(['pid', 'name', 'exe']):
         try:
             if proc.info['exe']:
                 for game_folder in GAME_FOLDERS:
-                    if proc.info['exe'].startswith(game_folder):
+                    if proc.info['exe'].startswith(game_folder) and game_folder not in ignored_game_folders:
                         return True
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
     return False
-
-def wait_for_game_exit():
-    """Wait for the game to exit or for the user to press 'c' to continue."""
-    print("\nGame detected. Pausing processing... Press 'c' to continue anyway.")
-    while is_game_running():
-        if msvcrt.kbhit() and msvcrt.getch().lower() == b'c':
-            print("\nContinuing processing despite game running.")
-            break
-        time.sleep(1)  # Check every second
-    else:
-        print("\nGame exited. Resuming processing...")
 
 def process_folder(source_folder, destination_folder, handbrakecli_path):
     os.makedirs(destination_folder, exist_ok=True)
