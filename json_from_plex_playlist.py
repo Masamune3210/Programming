@@ -72,10 +72,10 @@ def main():
         "files": items
     }
     
-    with open("playlist_info.json", "w", encoding="utf-8") as f:
+    with open("files_to_process.json", "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=4)
     
-    print("Playlist information saved to playlist_info.json")
+    print("Playlist information saved to files_to_process.json")
 
 if __name__ == "__main__":
     main()
