@@ -41,7 +41,7 @@ def get_playlist_items(playlist_key):
             if file_path.startswith(DOCKER_MOUNT_PATH):
                 file_path = file_path.replace(DOCKER_MOUNT_PATH, WINDOWS_MOUNT_PATH).replace("/", "\\")
 
-            items.append({"file_path": file_path, "size": file_size})
+            items.append({"file": file_path, "size": file_size})
         return items
     except ET.ParseError:
         print("Failed to parse XML response from Plex.")
