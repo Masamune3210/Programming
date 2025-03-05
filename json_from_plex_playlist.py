@@ -1,11 +1,13 @@
 import requests
 import json
 import xml.etree.ElementTree as ET
+import os
 
 DOCKER_MOUNT_PATH = "/data/"
 WINDOWS_MOUNT_PATH = "Y:\\Media\\Plex Media\\"
 PLEX_AUTH_TOKEN = "Mr2JPNmxYUGA6ZBhXs25"
 PLEX_IP_ADDRESS = "192.168.0.48"
+OUTPUT_FILE = "files_to_process.json"
 
 def get_playlists():
     url = f"http://{PLEX_IP_ADDRESS}:32400/playlists?X-Plex-Token={PLEX_AUTH_TOKEN}"
@@ -47,6 +49,17 @@ def get_playlist_items(playlist_key):
         print("Failed to parse XML response from Plex.")
         return []
 
+def load_existing_data(output_file):
+    """Load existing data from the output file if it exists."""
+    if os.path.exists(output_file):
+        try:
+            with open(output_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except json.JSONDecodeError:
+            print("[ERROR] JSON file is corrupt. Starting fresh.")
+            return {"encoder": "", "ignored_encoders": [], "files": []}
+    return {"encoder": "", "ignored_encoders": [], "files": []}
+
 def main():
     playlists = get_playlists()
     if not playlists:
@@ -66,16 +79,17 @@ def main():
     playlist_key = selected_playlist['ratingKey']
     items = get_playlist_items(playlist_key)
     
-    output_data = {
-        "encoder": "",
-        "ignored_encoders": [],
-        "files": items
-    }
+    existing_data = load_existing_data(OUTPUT_FILE)
+    existing_files_set = {file_info["file"] for file_info in existing_data["files"]}
     
-    with open("files_to_process.json", "w", encoding="utf-8") as f:
-        json.dump(output_data, f, indent=4)
+    for item in items:
+        if item["file"] not in existing_files_set:
+            existing_data["files"].append(item)
     
-    print("Playlist information saved to files_to_process.json")
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(existing_data, f, indent=4)
+    
+    print(f"Playlist information updated in {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
