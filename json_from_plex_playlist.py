@@ -37,7 +37,7 @@ def get_playlist_items(playlist_key):
             media = item.find("Media")
             part = media.find("Part") if media is not None else None
             file_path = part.get("file") if part is not None else "Unknown"
-            file_size = part.get("size", 0) if part is not None else 0
+            file_size = int(part.get("size", 0)) if part is not None else 0
 
             # Convert Docker path to Windows path
             if file_path.startswith(DOCKER_MOUNT_PATH):
