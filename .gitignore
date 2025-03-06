@@ -8,3 +8,4 @@ files_to_process finished.json
 non_english_audio.json
 process_errors.log
 broken_files.json
+gog_games_database.json
