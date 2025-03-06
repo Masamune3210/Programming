@@ -39,27 +39,16 @@ def scan_directory(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
             for entry in os.scandir(game_folder.path):
                 if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                    game_title, game_id = extract_game_info(entry.name)
-                    if game_title:
-                        # If this game ID has not been seen before, store it
-                        if game_id not in detected_games:
-                            detected_games[game_id] = (game_title, entry.name)
-                        else:
-                            # Compare filenames, keep the one with the shortest length
-                            _, existing_filename = detected_games[game_id]
-                            if len(entry.name) < len(existing_filename):
-                                detected_games[game_id] = (game_title, entry.name)
-    
-    # Get the latest updates for the detected games
-    outdated_games_info = []
-    for game_id, (game_title, _) in detected_games.items():
-        latest_update, formatted_title = get_latest_update(game_title)
-        if latest_update:
-            local_date = datetime.fromtimestamp(os.stat(entry.path).st_mtime).strftime('%Y-%m-%d')
-            if latest_update != local_date:
-                outdated_games_info.append((game_title, local_date, latest_update, formatted_title))
-
-    return outdated_games_info, detected_games
+                    game_title, local_version, game_id = extract_game_info(entry.name)
+                    if game_id and game_id not in checked_ids:
+                        checked_ids.add(game_id)
+                        if game_title and local_version:
+                            latest_update, formatted_title = get_latest_update(game_title)
+                            detected_games.append((game_title, local_version, latest_update))
+                            if latest_update and latest_update != local_version:
+                                local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
+                                outdated_games.append((game_title, local_date, latest_update, formatted_title))
+    return outdated_games, detected_games
 
 def main():
     """Main function to handle user interaction and processing."""
