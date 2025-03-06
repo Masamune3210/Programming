@@ -50,15 +50,17 @@ def scan_directory(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
             game_title, game_id = extract_game_info_from_name_file(game_folder.path)
             
-            if not game_title:
+            if game_title:
+                detected_games.add((game_title, game_id))
+            else:
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
                         game_title, game_id = extract_game_info(entry.name)
                         if game_title:
+                            detected_games.add((game_title, game_id))
                             break
             
             if game_title and (not game_id or game_id not in queried_game_ids):
-                detected_games.add((game_title, game_id))
                 if game_id:
                     queried_game_ids.add(game_id)
                 latest_update, formatted_title = get_latest_update(game_title)
