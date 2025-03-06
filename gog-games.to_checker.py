@@ -33,7 +33,8 @@ def get_latest_update(game_title):
 def scan_directory(directory):
     """Scan the directory for game installers and compare local dates with the latest updates."""
     outdated_games = []
-    detected_games = []
+    detected_games = set()  # Using a set to avoid duplicates
+    queried_game_ids = set()  # Track which game IDs have already been queried
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
@@ -41,13 +42,19 @@ def scan_directory(directory):
                 if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
                     game_title, game_id = extract_game_info(entry.name)
                     if game_title:
-                        latest_update, formatted_title = get_latest_update(game_title)
-                        detected_games.append((game_title, game_id))
-                        if latest_update:
-                            local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
-                            if latest_update != local_date:
-                                outdated_games.append((game_title, local_date, latest_update, formatted_title))
-    return outdated_games, detected_games
+                        # Add only unique game IDs to detected_games set
+                        detected_games.add((game_title, game_id))
+                        
+                        # Query API only once per game ID
+                        if game_id not in queried_game_ids:
+                            queried_game_ids.add(game_id)
+                            latest_update, formatted_title = get_latest_update(game_title)
+                            if latest_update:
+                                local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
+                                if latest_update != local_date:
+                                    outdated_games.append((game_title, local_date, latest_update, formatted_title))
+    
+    return outdated_games, list(detected_games)
 
 def main():
     """Main function to handle user interaction and processing."""
@@ -59,6 +66,9 @@ def main():
     outdated_games, detected_games = scan_directory(directory)
     
     if detected_games:
+        # Alphabetize the detected games by title
+        detected_games.sort(key=lambda x: x[0].lower())
+        
         print("\nDetected Games:")
         for title, game_id in detected_games:
             print(f"{title} (ID: {game_id})")
