@@ -18,77 +18,72 @@ def load_game_database():
 
 game_database = load_game_database()
 
-def find_game_in_database(title):
-    """Find game information in the local database by title."""
+def find_game_in_database_by_slug(slug):
+    """Find game information in the local database by slug."""
+    normalized_slug = slug.strip().lower()
     for game in game_database:
-        if game["title"].lower() == title.lower():
-            return game["title"], game["id"], game["slug"]
-    return title, None, None
+        db_slug = game["slug"].strip().lower()
+        if db_slug == normalized_slug:
+            print(f"Found {slug} in database, using database entry: {game['title']}")
+            return game["title"], game["id"], game["slug"], game.get("last_update")
+    print(f"Game slug '{slug}' not found in database.")
+    return slug, None, None, None
 
 def extract_game_info_from_name_file(game_folder_path):
     """Check for a .name file in the game folder and return the proper title from the database."""
+    print(f"Scanning folder for .name file: {game_folder_path}")
     for entry in os.scandir(game_folder_path):
         if entry.is_file() and entry.name.endswith(".name"):
-            print(f"Found .name file: {entry.path}")  # Debug log
+            print(f"Found .name file: {entry.path}")
             with open(entry.path, 'r', encoding='utf-8') as name_file:
-                raw_title = name_file.read().strip()
-                matched_title, game_id, game_slug = find_game_in_database(raw_title)
-                print(f"Game matched: {matched_title} (ID: {game_id})")  # Debug log
-                return matched_title, game_id, game_slug
-    print("No .name file found in folder.")  # Debug log
-    return None, None, None
+                raw_slug = name_file.read().strip()
+                matched_title, game_id, game_slug, last_update = find_game_in_database_by_slug(raw_slug)
+                if game_id:
+                    print(f"Using database entry for: {matched_title} (ID: {game_id})")
+                else:
+                    print(f"No database entry found, using raw slug: {raw_slug}")
+                return matched_title, game_id, game_slug, last_update
+    print("No .name file found in folder.")
+    return None, None, None, None
 
 def extract_game_info(filename):
     """Extract game title and ID from the filename."""
+    print(f"Extracting info from filename: {filename}")
     match = re.search(r"setup_(.+?)_([\d\.r]+)(?:_|\s)\((\d+)\)", filename)
     if match:
         title = match.group(1).replace("_", " ").title()
-        game_id = match.group(3)
-        return find_game_in_database(title)
-    return None, None, None
-
-def get_latest_update(game_title):
-    """Fetch the latest update information for the game from the API."""
-    formatted_title = game_title.replace(" ", "_")
-    response = requests.get(f"{GOG_API_URL}{formatted_title}")
-    
-    if response.status_code == 200:
-        game_info = response.json().get('game_info', {})
-        if game_title.lower() in game_info.get('title', '').lower():
-            last_update = game_info.get('last_update')
-            if last_update:
-                return last_update.split("T")[0], formatted_title
-    return None, None
+        print(f"Extracted title: {title}")
+        return find_game_in_database_by_slug(title)
+    print("Filename pattern did not match.")
+    return None, None, None, None
 
 def scan_directory(directory):
     """Scan the directory for game installers and compare local dates with the latest updates."""
+    print(f"Starting scan of directory: {directory}")
     outdated_games = []
     detected_games = set()
-    queried_game_ids = set()
     
     for game_folder in os.scandir(directory):
-        if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
-            print(f"Scanning folder: {game_folder.path}")  # Debug log
-            game_title, game_id, game_slug = extract_game_info_from_name_file(game_folder.path)
+        if game_folder.is_dir():
+            print(f"Scanning folder: {game_folder.path}")
+            game_title, game_id, game_slug, last_update = extract_game_info_from_name_file(game_folder.path)
             
             if not game_title:
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                        game_title, game_id, game_slug = extract_game_info(entry.name)
+                        game_title, game_id, game_slug, last_update = extract_game_info(entry.name)
                         if game_title:
                             break
             
             if game_title:
                 detected_games.add((game_title, game_id or "N/A"))
+                print(f"Detected game: {game_title} (ID: {game_id if game_id else 'N/A'})")
             
-            if game_title and (not game_id or game_id not in queried_game_ids):
-                if game_id:
-                    queried_game_ids.add(game_id)
-                latest_update, formatted_title = get_latest_update(game_title)
-                if latest_update:
-                    local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
-                    if latest_update != local_date:
-                        outdated_games.append((game_title, local_date, latest_update, game_slug or formatted_title))
+            if game_title and game_id and last_update:
+                local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
+                print(f"Checking update status: {game_title} (Local: {local_date}, Latest: {last_update.split('T')[0]})")
+                if last_update.split("T")[0] != local_date:
+                    outdated_games.append((game_title, local_date, last_update.split("T")[0], game_slug))
     
     return outdated_games, list(detected_games)
 
@@ -105,7 +100,7 @@ def main():
         detected_games.sort(key=lambda x: x[0].lower())
         print("\nDetected Games:")
         for title, game_id in detected_games:
-            print(f"{title} (ID: {game_id if game_id else 'N/A'})")
+            print(f"{title} (ID: {game_id})")
     
     if outdated_games:
         print("\nOutdated Games Found:")
