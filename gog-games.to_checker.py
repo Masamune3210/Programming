@@ -2,88 +2,75 @@ import os
 import re
 import requests
 import webbrowser
-from datetime import datetime
 
-gog_api_url = "https://gog-games.to/api/web/query-game/"
-gog_game_url = "https://gog-games.to/game/"
+GOG_API_URL = "https://gog-games.to/api/web/query-game/"
+GOG_GAME_URL = "https://gog-games.to/game/"
 
 def extract_game_info(filename):
+    """Extract game title, version, and ID from the filename."""
     match = re.search(r"setup_(.+?)_([\d\.r]+)(?:_|\s)\((\d+)\)", filename)
     if match:
         title = match.group(1).replace("_", " ").title()
         version = match.group(2)
         game_id = match.group(3)
-        print(f"Extracted: Title={title}, Version={version}, ID={game_id}")  # Debug print
         return title, version, game_id
-    print(f"Failed to extract info from: {filename}")  # Debug print
     return None, None, None
 
 def get_latest_update(game_title):
+    """Fetch the latest update information for the game from the API."""
     formatted_title = game_title.replace(" ", "_")
-    response = requests.get(f"{gog_api_url}{formatted_title}")
-    print(f"API Request: {gog_api_url}{formatted_title} -> Status: {response.status_code}")  # Debug print
+    response = requests.get(f"{GOG_API_URL}{formatted_title}")
+    
     if response.status_code == 200:
-        print(f"API Response: {response.text[:200]}...")  # Debug print (truncated for readability)
         game_info = response.json().get('game_info', {})
         if game_title.lower() in game_info.get('title', '').lower():
             last_update = game_info.get('last_update')
-            if last_update:
-                return last_update, formatted_title
-            else:
-                print(f"No updates found for {game_title}.")  # Debug print
-                return "No updates", formatted_title
+            return last_update, formatted_title
     return None, None
 
 def scan_directory(directory):
+    """Scan the directory for game installers and compare local versions with the latest updates."""
     outdated_games = []
     detected_games = []
     checked_ids = set()
+    
     for game_folder in os.scandir(directory):
-        if game_folder.is_dir():
-            if "[FitGirl Repack]" in game_folder.name or "[DODI Repack]" in game_folder.name:
-                print(f"Skipping folder: {game_folder.name}")  # Debug print
-                continue
-            print(f"Checking game folder: {game_folder.name}")  # Debug print
+        if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
             for entry in os.scandir(game_folder.path):
-                print(f"Checking entry: {entry.name}")  # Debug print
-                if entry.is_file():
-                    if entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                        print(f"File fits criteria: {entry.name}")  # Debug print
-                        game_title, local_version, game_id = extract_game_info(entry.name)
-                        if game_id and game_id not in checked_ids:
-                            checked_ids.add(game_id)
-                            if game_title and local_version:
-                                latest_update, formatted_title = get_latest_update(game_title)
-                                detected_games.append((game_title, local_version, latest_update))
-                                print(f"Detected: {game_title} (Local: {local_version}, Remote: {latest_update if latest_update else 'Unknown'})")
-                                if latest_update and latest_update != local_version:
-                                    outdated_games.append((game_title, local_version, latest_update, formatted_title))
-                                else:
-                                    print(f"{game_title} is up to date.")
-                    else:
-                        print(f"File does not fit criteria: {entry.name}")  # Debug print
-    print("\nDetected Games:")
-    for title, local, latest in detected_games:
-        print(f"{title} (Local: {local}, Remote: {latest if latest else 'Unknown'})")
-    return outdated_games
+                if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
+                    game_title, local_version, game_id = extract_game_info(entry.name)
+                    if game_id and game_id not in checked_ids:
+                        checked_ids.add(game_id)
+                        if game_title and local_version:
+                            latest_update, formatted_title = get_latest_update(game_title)
+                            detected_games.append((game_title, local_version, latest_update))
+                            if latest_update and latest_update != local_version:
+                                outdated_games.append((game_title, local_version, latest_update, formatted_title))
+    return outdated_games, detected_games
 
 def main():
+    """Main function to handle user interaction and processing."""
     directory = input("Enter the path to your GOG installers folder: ").strip()
     if not os.path.isdir(directory):
         print("Invalid directory. Please enter a valid folder path.")
         return
     
-    outdated_games = scan_directory(directory)
+    outdated_games, detected_games = scan_directory(directory)
+    
+    if detected_games:
+        print("\nDetected Games:")
+        for title, local, latest in detected_games:
+            print(f"{title} (Local: {local}, Remote: {latest if latest else 'Unknown'})")
     
     if outdated_games:
         print("\nOutdated Games Found:")
-        for i, (title, local, latest, formatted_title) in enumerate(outdated_games, start=1):
+        for i, (title, local, latest, _) in enumerate(outdated_games, start=1):
             print(f"{i}. {title} (Local: {local} -> Latest: {latest})")
         
         open_pages = input("\nWould you like to open the pages for these games? (y/n): ").strip().lower()
         if open_pages == 'y':
             for _, _, _, formatted_title in outdated_games:
-                webbrowser.open(f"{gog_game_url}{formatted_title}")
+                webbrowser.open(f"{GOG_GAME_URL}{formatted_title}")
     else:
         print("\nAll games are up to date!")
 
