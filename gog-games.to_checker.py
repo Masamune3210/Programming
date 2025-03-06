@@ -13,8 +13,7 @@ def extract_game_info_from_name_file(game_folder):
     if os.path.isfile(name_file_path):
         with open(name_file_path, 'r', encoding='utf-8') as name_file:
             game_title = name_file.read().strip()
-            # Assuming the ID still comes from the folder or a similar pattern, we need to extract it
-            game_id_match = re.search(r"\((\d+)\)", game_folder.name)
+            game_id_match = re.search(r"\((\d+)\)", game_folder)
             game_id = game_id_match.group(1) if game_id_match else None
             return game_title, game_id
     return None, None
@@ -38,45 +37,35 @@ def get_latest_update(game_title):
         if game_title.lower() in game_info.get('title', '').lower():
             last_update = game_info.get('last_update')
             if last_update:
-                # Clean the returned date (remove time part)
                 return last_update.split("T")[0], formatted_title
     return None, None
 
 def scan_directory(directory):
     """Scan the directory for game installers and compare local dates with the latest updates."""
     outdated_games = []
-    detected_games = set()  # Using a set to avoid duplicates
-    queried_game_ids = set()  # Track which game IDs have already been queried
+    detected_games = set()
+    queried_game_ids = set()
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
-            # First check for .name file
             game_title, game_id = extract_game_info_from_name_file(game_folder.path)
             
-            if game_title:
-                # If .name file is found, treat it as a GOG game and use the game title and ID
-                if game_id not in queried_game_ids:
-                    detected_games.add((game_title, game_id))
-                    queried_game_ids.add(game_id)
-                    latest_update, formatted_title = get_latest_update(game_title)
-                    if latest_update:
-                        local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
-                        if latest_update != local_date:
-                            outdated_games.append((game_title, local_date, latest_update, formatted_title))
-            
-            else:
-                # If no .name file, fallback to checking setup files (normal GOG game detection)
+            if not game_title:
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
                         game_title, game_id = extract_game_info(entry.name)
-                        if game_title and game_id not in queried_game_ids:
-                            detected_games.add((game_title, game_id))
-                            queried_game_ids.add(game_id)
-                            latest_update, formatted_title = get_latest_update(game_title)
-                            if latest_update:
-                                local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
-                                if latest_update != local_date:
-                                    outdated_games.append((game_title, local_date, latest_update, formatted_title))
+                        if game_title:
+                            break
+            
+            if game_title and (not game_id or game_id not in queried_game_ids):
+                detected_games.add((game_title, game_id))
+                if game_id:
+                    queried_game_ids.add(game_id)
+                latest_update, formatted_title = get_latest_update(game_title)
+                if latest_update:
+                    local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
+                    if latest_update != local_date:
+                        outdated_games.append((game_title, local_date, latest_update, formatted_title))
     
     return outdated_games, list(detected_games)
 
@@ -90,9 +79,7 @@ def main():
     outdated_games, detected_games = scan_directory(directory)
     
     if detected_games:
-        # Alphabetize the detected games by title
         detected_games.sort(key=lambda x: x[0].lower())
-        
         print("\nDetected Games:")
         for title, game_id in detected_games:
             print(f"{title} (ID: {game_id})")
