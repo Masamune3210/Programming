@@ -64,6 +64,10 @@ def scan_directory(directory):
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir():
+            if "[FitGirl Repacks]" in game_folder.name or "[DODI Repacks]" in game_folder.name:
+                print(f"Skipping folder: {game_folder.name}")  # Debug print
+                continue
+            
             game_title, game_id, game_slug, last_update = extract_game_info_from_name_file(game_folder.path)
             
             if not game_title:
