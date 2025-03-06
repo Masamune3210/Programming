@@ -18,25 +18,16 @@ def extract_game_info(filename):
     print(f"Failed to extract info from: {filename}")  # Debug print
     return None, None, None
 
-def get_latest_version(game_title):
+def get_latest_update(game_title):
     formatted_title = game_title.replace(" ", "_")
     response = requests.get(f"{gog_api_url}{formatted_title}")
     print(f"API Request: {gog_api_url}{formatted_title} -> Status: {response.status_code}")  # Debug print
     if response.status_code == 200:
         print(f"API Response: {response.text[:200]}...")  # Debug print (truncated for readability)
         game_info = response.json().get('game_info', {})
-        files = response.json().get('files', [])
         if game_title.lower() in game_info.get('title', '').lower():
             last_update = game_info.get('last_update')
-            latest_version = None
-            for file in files:
-                match = re.search(r"_([\d\.r]+)_\(\d+\)\.exe", file['name'])
-                if match:
-                    latest_version = match.group(1)
-                    break
-            if latest_version and re.match(r"^\d+(\.\d+)*$", latest_version):
-                return latest_version, formatted_title
-            elif last_update:
+            if last_update:
                 return last_update, formatted_title
             else:
                 print(f"No updates found for {game_title}.")  # Debug print
@@ -62,11 +53,11 @@ def scan_directory(directory):
                         if game_id and game_id not in checked_ids:
                             checked_ids.add(game_id)
                             if game_title and local_version:
-                                latest_version, formatted_title = get_latest_version(game_title)
-                                detected_games.append((game_title, local_version, latest_version))
-                                print(f"Detected: {game_title} (Local: {local_version}, Remote: {latest_version if latest_version else 'Unknown'})")
-                                if latest_version and latest_version != local_version:
-                                    outdated_games.append((game_title, local_version, latest_version, formatted_title))
+                                latest_update, formatted_title = get_latest_update(game_title)
+                                detected_games.append((game_title, local_version, latest_update))
+                                print(f"Detected: {game_title} (Local: {local_version}, Remote: {latest_update if latest_update else 'Unknown'})")
+                                if latest_update and latest_update != local_version:
+                                    outdated_games.append((game_title, local_version, latest_update, formatted_title))
                                 else:
                                     print(f"{game_title} is up to date.")
                     else:
