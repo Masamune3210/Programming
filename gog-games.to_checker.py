@@ -7,16 +7,17 @@ from datetime import datetime
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 
-def extract_game_info_from_name_file(game_folder):
-    """Check for a .name file in the game folder and return the game title and ID."""
-    name_file_path = os.path.join(game_folder, ".name")
-    if os.path.isfile(name_file_path):
-        with open(name_file_path, 'r', encoding='utf-8') as name_file:
-            game_title = name_file.read().strip()
-            game_id_match = re.search(r"\((\d+)\)", game_folder)
-            game_id = game_id_match.group(1) if game_id_match else None
-            return game_title, game_id
-    return None, None
+def extract_game_info_from_name_file(game_folder_path):
+    """Check for a .name file in the game folder and return the game title."""
+    for entry in os.scandir(game_folder_path):
+        if entry.is_file() and entry.name.endswith(".name"):
+            print(f"Found .name file: {entry.path}")  # Debug log
+            with open(entry.path, 'r', encoding='utf-8') as name_file:
+                game_title = name_file.read().strip()
+                print(f"Game title extracted from {entry.name}: {game_title}")  # Debug log
+                return game_title
+    print("No .name file found in folder.")  # Debug log
+    return None
 
 def extract_game_info(filename):
     """Extract game title and ID from the filename."""
@@ -48,7 +49,9 @@ def scan_directory(directory):
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
-            game_title, game_id = extract_game_info_from_name_file(game_folder.path)
+            print(f"Scanning folder: {game_folder.path}")  # Debug log
+            game_title = extract_game_info_from_name_file(game_folder.path)
+            game_id = None  # Assume no game ID from .name files
             
             if game_title:
                 detected_games.add((game_title, game_id))
@@ -59,6 +62,9 @@ def scan_directory(directory):
                         if game_title:
                             detected_games.add((game_title, game_id))
                             break
+            
+            if game_title and game_title not in {title for title, _ in detected_games}:
+                detected_games.add((game_title, game_id))
             
             if game_title and (not game_id or game_id not in queried_game_ids):
                 if game_id:
@@ -84,7 +90,7 @@ def main():
         detected_games.sort(key=lambda x: x[0].lower())
         print("\nDetected Games:")
         for title, game_id in detected_games:
-            print(f"{title} (ID: {game_id})")
+            print(f"{title} (ID: {game_id if game_id else 'N/A'})")
     
     if outdated_games:
         print("\nOutdated Games Found:")
