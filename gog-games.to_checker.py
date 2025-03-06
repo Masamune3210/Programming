@@ -5,7 +5,6 @@ import requests
 import webbrowser
 from datetime import datetime
 
-GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 DATABASE_FILE = "gog_games_database.json"
 
