@@ -7,6 +7,18 @@ from datetime import datetime
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 
+def extract_game_info_from_name_file(game_folder):
+    """Check for a .name file in the game folder and return the game title and ID."""
+    name_file_path = os.path.join(game_folder, ".name")
+    if os.path.isfile(name_file_path):
+        with open(name_file_path, 'r', encoding='utf-8') as name_file:
+            game_title = name_file.read().strip()
+            # Assuming the ID still comes from the folder or a similar pattern, we need to extract it
+            game_id_match = re.search(r"\((\d+)\)", game_folder.name)
+            game_id = game_id_match.group(1) if game_id_match else None
+            return game_title, game_id
+    return None, None
+
 def extract_game_info(filename):
     """Extract game title and ID from the filename."""
     match = re.search(r"setup_(.+?)_([\d\.r]+)(?:_|\s)\((\d+)\)", filename)
@@ -38,19 +50,31 @@ def scan_directory(directory):
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
-            for entry in os.scandir(game_folder.path):
-                if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                    game_title, game_id = extract_game_info(entry.name)
-                    if game_title:
-                        # Add only unique game IDs to detected_games set
-                        detected_games.add((game_title, game_id))
-                        
-                        # Query API only once per game ID
-                        if game_id not in queried_game_ids:
+            # First check for .name file
+            game_title, game_id = extract_game_info_from_name_file(game_folder.path)
+            
+            if game_title:
+                # If .name file is found, treat it as a GOG game and use the game title and ID
+                if game_id not in queried_game_ids:
+                    detected_games.add((game_title, game_id))
+                    queried_game_ids.add(game_id)
+                    latest_update, formatted_title = get_latest_update(game_title)
+                    if latest_update:
+                        local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
+                        if latest_update != local_date:
+                            outdated_games.append((game_title, local_date, latest_update, formatted_title))
+            
+            else:
+                # If no .name file, fallback to checking setup files (normal GOG game detection)
+                for entry in os.scandir(game_folder.path):
+                    if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
+                        game_title, game_id = extract_game_info(entry.name)
+                        if game_title and game_id not in queried_game_ids:
+                            detected_games.add((game_title, game_id))
                             queried_game_ids.add(game_id)
                             latest_update, formatted_title = get_latest_update(game_title)
                             if latest_update:
-                                local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
+                                local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
                                 if latest_update != local_date:
                                     outdated_games.append((game_title, local_date, latest_update, formatted_title))
     
