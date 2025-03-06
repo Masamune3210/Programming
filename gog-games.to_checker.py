@@ -2,6 +2,7 @@ import os
 import re
 import requests
 import webbrowser
+from datetime import datetime
 
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
@@ -25,7 +26,9 @@ def get_latest_update(game_title):
         game_info = response.json().get('game_info', {})
         if game_title.lower() in game_info.get('title', '').lower():
             last_update = game_info.get('last_update')
-            return last_update, formatted_title
+            if last_update:
+                # Clean the returned date (remove time part)
+                return last_update.split("T")[0], formatted_title
     return None, None
 
 def scan_directory(directory):
@@ -45,7 +48,8 @@ def scan_directory(directory):
                             latest_update, formatted_title = get_latest_update(game_title)
                             detected_games.append((game_title, local_version, latest_update))
                             if latest_update and latest_update != local_version:
-                                outdated_games.append((game_title, local_version, latest_update, formatted_title))
+                                local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
+                                outdated_games.append((game_title, local_date, latest_update, formatted_title))
     return outdated_games, detected_games
 
 def main():
@@ -64,8 +68,8 @@ def main():
     
     if outdated_games:
         print("\nOutdated Games Found:")
-        for i, (title, local, latest, _) in enumerate(outdated_games, start=1):
-            print(f"{i}. {title} (Local: {local} -> Latest: {latest})")
+        for i, (title, local_date, latest, _) in enumerate(outdated_games, start=1):
+            print(f"{i}. {title} (Local Date: {local_date} -> Latest: {latest})")
         
         open_pages = input("\nWould you like to open the pages for these games? (y/n): ").strip().lower()
         if open_pages == 'y':
