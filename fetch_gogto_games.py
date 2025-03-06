@@ -17,9 +17,12 @@ def fetch_games():
         for game in games:
             game_data.append({
                 "id": game["id"],
-                "title": game["title"],
                 "slug": game["slug"],
-                "last_update": game["last_update"]
+                "title": game["title"],
+                "developer": game["developer"],
+                "publisher": game["publisher"],
+                "last_update": game["last_update"],
+                "infohash": game["infohash"]
             })
 
         # Save the extracted data to a JSON file
