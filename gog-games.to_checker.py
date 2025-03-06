@@ -5,6 +5,7 @@ import requests
 import webbrowser
 from datetime import datetime
 
+GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 DATABASE_FILE = "gog_games_database.json"
 
@@ -23,48 +24,46 @@ def find_game_in_database_by_slug(slug):
     for game in game_database:
         db_slug = game["slug"].strip().lower()
         if db_slug == normalized_slug:
-            print(f"Found {slug} in database, using database entry: {game['title']}")
             return game["title"], game["id"], game["slug"], game.get("last_update")
-    print(f"Game slug '{slug}' not found in database.")
     return slug, None, None, None
 
 def extract_game_info_from_name_file(game_folder_path):
     """Check for a .name file in the game folder and return the proper title from the database."""
-    print(f"Scanning folder for .name file: {game_folder_path}")
     for entry in os.scandir(game_folder_path):
         if entry.is_file() and entry.name.endswith(".name"):
-            print(f"Found .name file: {entry.path}")
             with open(entry.path, 'r', encoding='utf-8') as name_file:
                 raw_slug = name_file.read().strip()
-                matched_title, game_id, game_slug, last_update = find_game_in_database_by_slug(raw_slug)
-                if game_id:
-                    print(f"Using database entry for: {matched_title} (ID: {game_id})")
-                else:
-                    print(f"No database entry found, using raw slug: {raw_slug}")
-                return matched_title, game_id, game_slug, last_update
-    print("No .name file found in folder.")
+                return find_game_in_database_by_slug(raw_slug)
     return None, None, None, None
 
 def extract_game_info(filename):
     """Extract game title and ID from the filename."""
-    print(f"Extracting info from filename: {filename}")
     match = re.search(r"setup_(.+?)_([\d\.r]+)(?:_|\s)\((\d+)\)", filename)
     if match:
         title = match.group(1).replace("_", " ").title()
-        print(f"Extracted title: {title}")
         return find_game_in_database_by_slug(title)
-    print("Filename pattern did not match.")
     return None, None, None, None
+
+def generate_name_files(output_directory):
+    """Generate .name files for all slugs found in the database."""
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+    
+    for game in game_database:
+        slug = game["slug"]
+        name_file_path = os.path.join(output_directory, f"{slug}.name")
+        with open(name_file_path, "w", encoding="utf-8") as name_file:
+            name_file.write(slug)
+    
+    print(f"Generated .name files in {output_directory}")
 
 def scan_directory(directory):
     """Scan the directory for game installers and compare local dates with the latest updates."""
-    print(f"Starting scan of directory: {directory}")
     outdated_games = []
     detected_games = set()
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir():
-            print(f"Scanning folder: {game_folder.path}")
             game_title, game_id, game_slug, last_update = extract_game_info_from_name_file(game_folder.path)
             
             if not game_title:
@@ -76,11 +75,9 @@ def scan_directory(directory):
             
             if game_title:
                 detected_games.add((game_title, game_id or "N/A"))
-                print(f"Detected game: {game_title} (ID: {game_id if game_id else 'N/A'})")
             
             if game_title and game_id and last_update:
                 local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
-                print(f"Checking update status: {game_title} (Local: {local_date}, Latest: {last_update.split('T')[0]})")
                 if last_update.split("T")[0] != local_date:
                     outdated_games.append((game_title, local_date, last_update.split("T")[0], game_slug))
     
@@ -88,6 +85,13 @@ def scan_directory(directory):
 
 def main():
     """Main function to handle user interaction and processing."""
+    choice = input("Do you want to scan a directory (1) or generate .name files (2)? ").strip()
+    
+    if choice == "2":
+        output_directory = input("Enter the output directory for .name files: ").strip()
+        generate_name_files(output_directory)
+        return
+    
     directory = input("Enter the path to your GOG installers folder: ").strip()
     if not os.path.isdir(directory):
         print("Invalid directory. Please enter a valid folder path.")
