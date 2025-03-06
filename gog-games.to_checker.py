@@ -1,23 +1,42 @@
 import os
 import re
+import json
 import requests
 import webbrowser
 from datetime import datetime
 
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
+DATABASE_FILE = "gog_games_database.json"
+
+def load_game_database():
+    """Load GOG games database from JSON file."""
+    if os.path.isfile(DATABASE_FILE):
+        with open(DATABASE_FILE, 'r', encoding='utf-8') as db_file:
+            return json.load(db_file)
+    return []
+
+game_database = load_game_database()
+
+def find_game_in_database(title):
+    """Find game information in the local database by title."""
+    for game in game_database:
+        if game["title"].lower() == title.lower():
+            return game["title"], game["id"], game["slug"]
+    return title, None, None
 
 def extract_game_info_from_name_file(game_folder_path):
-    """Check for a .name file in the game folder and return the game title."""
+    """Check for a .name file in the game folder and return the proper title from the database."""
     for entry in os.scandir(game_folder_path):
         if entry.is_file() and entry.name.endswith(".name"):
             print(f"Found .name file: {entry.path}")  # Debug log
             with open(entry.path, 'r', encoding='utf-8') as name_file:
-                game_title = name_file.read().strip()
-                print(f"Game title extracted from {entry.name}: {game_title}")  # Debug log
-                return game_title
+                raw_title = name_file.read().strip()
+                matched_title, game_id, game_slug = find_game_in_database(raw_title)
+                print(f"Game matched: {matched_title} (ID: {game_id})")  # Debug log
+                return matched_title, game_id, game_slug
     print("No .name file found in folder.")  # Debug log
-    return None
+    return None, None, None
 
 def extract_game_info(filename):
     """Extract game title and ID from the filename."""
@@ -25,8 +44,8 @@ def extract_game_info(filename):
     if match:
         title = match.group(1).replace("_", " ").title()
         game_id = match.group(3)
-        return title, game_id
-    return None, None
+        return find_game_in_database(title)
+    return None, None, None
 
 def get_latest_update(game_title):
     """Fetch the latest update information for the game from the API."""
@@ -50,21 +69,17 @@ def scan_directory(directory):
     for game_folder in os.scandir(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
             print(f"Scanning folder: {game_folder.path}")  # Debug log
-            game_title = extract_game_info_from_name_file(game_folder.path)
-            game_id = None  # Assume no game ID from .name files
+            game_title, game_id, game_slug = extract_game_info_from_name_file(game_folder.path)
             
-            if game_title:
-                detected_games.add((game_title, game_id))
-            else:
+            if not game_title:
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                        game_title, game_id = extract_game_info(entry.name)
+                        game_title, game_id, game_slug = extract_game_info(entry.name)
                         if game_title:
-                            detected_games.add((game_title, game_id))
                             break
             
-            if game_title and game_title not in {title for title, _ in detected_games}:
-                detected_games.add((game_title, game_id))
+            if game_title:
+                detected_games.add((game_title, game_id or "N/A"))
             
             if game_title and (not game_id or game_id not in queried_game_ids):
                 if game_id:
@@ -73,7 +88,7 @@ def scan_directory(directory):
                 if latest_update:
                     local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
                     if latest_update != local_date:
-                        outdated_games.append((game_title, local_date, latest_update, formatted_title))
+                        outdated_games.append((game_title, local_date, latest_update, game_slug or formatted_title))
     
     return outdated_games, list(detected_games)
 
@@ -94,13 +109,13 @@ def main():
     
     if outdated_games:
         print("\nOutdated Games Found:")
-        for i, (title, local_date, latest, _) in enumerate(outdated_games, start=1):
+        for i, (title, local_date, latest, game_slug) in enumerate(outdated_games, start=1):
             print(f"{i}. {title} (Local Date: {local_date} -> Latest: {latest})")
         
         open_pages = input("\nWould you like to open the pages for these games? (y/n): ").strip().lower()
         if open_pages == 'y':
-            for _, _, _, formatted_title in outdated_games:
-                webbrowser.open(f"{GOG_GAME_URL}{formatted_title}")
+            for _, _, _, game_slug in outdated_games:
+                webbrowser.open(f"{GOG_GAME_URL}{game_slug}")
     else:
         print("\nAll games are up to date!")
 
