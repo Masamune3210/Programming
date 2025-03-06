@@ -8,14 +8,13 @@ GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 
 def extract_game_info(filename):
-    """Extract game title, version, and ID from the filename."""
+    """Extract game title and ID from the filename."""
     match = re.search(r"setup_(.+?)_([\d\.r]+)(?:_|\s)\((\d+)\)", filename)
     if match:
         title = match.group(1).replace("_", " ").title()
-        version = match.group(2)
         game_id = match.group(3)
-        return title, version, game_id
-    return None, None, None
+        return title, game_id
+    return None, None
 
 def get_latest_update(game_title):
     """Fetch the latest update information for the game from the API."""
@@ -32,25 +31,22 @@ def get_latest_update(game_title):
     return None, None
 
 def scan_directory(directory):
-    """Scan the directory for game installers and compare local versions with the latest updates."""
+    """Scan the directory for game installers and compare local dates with the latest updates."""
     outdated_games = []
     detected_games = []
-    checked_ids = set()
     
     for game_folder in os.scandir(directory):
         if game_folder.is_dir() and not any(repack in game_folder.name for repack in ["[FitGirl Repack]", "[DODI Repack]"]):
             for entry in os.scandir(game_folder.path):
                 if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                    game_title, local_version, game_id = extract_game_info(entry.name)
-                    if game_id and game_id not in checked_ids:
-                        checked_ids.add(game_id)
-                        if game_title and local_version:
-                            latest_update, formatted_title = get_latest_update(game_title)
-                            detected_games.append((game_title, local_version, latest_update))
-                            if latest_update and latest_update != local_version:
-                                local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
-                                if latest_update != local_date:
-                                    outdated_games.append((game_title, local_date, latest_update, formatted_title))
+                    game_title, game_id = extract_game_info(entry.name)
+                    if game_title:
+                        latest_update, formatted_title = get_latest_update(game_title)
+                        detected_games.append((game_title, game_id))
+                        if latest_update:
+                            local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
+                            if latest_update != local_date:
+                                outdated_games.append((game_title, local_date, latest_update, formatted_title))
     return outdated_games, detected_games
 
 def main():
@@ -64,8 +60,8 @@ def main():
     
     if detected_games:
         print("\nDetected Games:")
-        for title, local, latest in detected_games:
-            print(f"{title} (Local: {local}, Remote: {latest if latest else 'Unknown'})")
+        for title, game_id in detected_games:
+            print(f"{title} (ID: {game_id})")
     
     if outdated_games:
         print("\nOutdated Games Found:")
