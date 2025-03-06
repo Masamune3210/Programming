@@ -1,8 +1,8 @@
 import os
 import re
 import json
-import requests
 import webbrowser
+import time
 from datetime import datetime
 
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
@@ -69,21 +69,37 @@ def scan_directory(directory):
                 continue
             
             game_title, game_id, game_slug, last_update = extract_game_info_from_name_file(game_folder.path)
+            local_timestamp = None
             
             if not game_title:
                 for entry in os.scandir(game_folder.path):
-                    if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
+                    if entry.is_file() and not entry.name.endswith(".name"):
                         game_title, game_id, game_slug, last_update = extract_game_info(entry.name)
-                        if game_title:
-                            break
+                        local_timestamp = entry.stat().st_mtime  # Use file's modification date
+                        break
             
             if game_title:
                 detected_games.add((game_title, game_id or "N/A"))
             
-            if game_title and game_id and last_update:
-                local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
-                if last_update.split("T")[0] != local_date:
-                    outdated_games.append((game_title, local_date, last_update.split("T")[0], game_slug))
+            if game_title and game_id and last_update and local_timestamp:
+                last_update_timestamp = time.mktime(datetime.strptime(last_update.split("T")[0], '%Y-%m-%d').timetuple())
+                
+                # Debug prints to show the timestamps and comparison
+                print(f"Game: {game_title}")
+                print(f"Local Timestamp: {local_timestamp} ({datetime.fromtimestamp(local_timestamp)})")
+                print(f"Last Update Timestamp: {last_update_timestamp} ({datetime.fromtimestamp(last_update_timestamp)})")
+                
+                time_difference = last_update_timestamp - local_timestamp
+                print(f"Time Difference: {time_difference}")
+                print(f"Math: {last_update_timestamp} - {local_timestamp} = {time_difference}")
+                
+                if time_difference > 0:
+                    local_date = datetime.fromtimestamp(local_timestamp).strftime('%Y-%m-%d')
+                    last_update_date = datetime.fromtimestamp(last_update_timestamp).strftime('%Y-%m-%d')
+                    outdated_games.append((game_title, local_date, last_update_date, game_slug))
+                    print(f"Marked as outdated: {game_title}")
+                else:
+                    print(f"Up to date: {game_title}")
     
     return outdated_games, list(detected_games)
 
@@ -104,12 +120,13 @@ def main():
     outdated_games, detected_games = scan_directory(directory)
     
     if detected_games:
-        detected_games.sort(key=lambda x: x[0].lower())
+        detected_games = sorted(detected_games, key=lambda x: x[0].lower())
         print("\nDetected Games:")
         for title, game_id in detected_games:
             print(f"{title} (ID: {game_id})")
     
     if outdated_games:
+        outdated_games = sorted(outdated_games, key=lambda x: x[0].lower())
         print("\nOutdated Games Found:")
         for i, (title, local_date, latest, game_slug) in enumerate(outdated_games, start=1):
             print(f"{i}. {title} (Local Date: {local_date} -> Latest: {latest})")
