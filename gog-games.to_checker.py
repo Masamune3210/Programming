@@ -49,7 +49,8 @@ def scan_directory(directory):
                             detected_games.append((game_title, local_version, latest_update))
                             if latest_update and latest_update != local_version:
                                 local_date = datetime.fromtimestamp(entry.stat().st_mtime).strftime('%Y-%m-%d')
-                                outdated_games.append((game_title, local_date, latest_update, formatted_title))
+                                if latest_update != local_date:
+                                    outdated_games.append((game_title, local_date, latest_update, formatted_title))
     return outdated_games, detected_games
 
 def main():
