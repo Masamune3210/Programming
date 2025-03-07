@@ -21,6 +21,8 @@ def load_game_database():
             return json.load(db_file)
     return []
 
+game_database = load_game_database()
+
 def check_database_age():
     """Check the age of the database file and update if older than a week or if not found."""
     if not os.path.isfile(DATABASE_FILE) or datetime.now() - datetime.fromtimestamp(os.path.getmtime(DATABASE_FILE)) > timedelta(weeks=1):
@@ -133,7 +135,7 @@ def get_torrent_info(torrent_id):
         print(f"Response: {response.status_code} - {response.text}")
         return None
 
-def add_magnet_to_real_debrid(magnet_link):
+def add_magnet_to_real_debrid(title,magnet_link):
     """Add a magnet link to Real-Debrid and select all files if available."""
     headers = {
         "Authorization": f"Bearer {REAL_DEBRID_API_TOKEN}"
@@ -143,7 +145,7 @@ def add_magnet_to_real_debrid(magnet_link):
     }
     response = requests.post(REAL_DEBRID_API_URL, headers=headers, data=data)
     if response.status_code == 201:
-        print(f"Successfully added magnet link to Real-Debrid: {magnet_link}")
+        print(f"{title}: {magnet_link}")
         torrent_id = response.json().get("id")
         if torrent_id:
             torrent_info = get_torrent_info(torrent_id)
@@ -203,8 +205,8 @@ def main():
         
         if magnet_links:
             print("\nAdding Magnet Links to Real-Debrid:")
-            for link in magnet_links:
-                add_magnet_to_real_debrid(link)
+            for title, link in zip([game[0] for game in outdated_games], magnet_links):
+                add_magnet_to_real_debrid(title, link)
         
         open_pages = input("\nWould you like to open the pages for the games missing infohashes? (y/n): ").strip().lower()
         if open_pages == 'y':
