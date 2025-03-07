@@ -18,10 +18,52 @@ def load_game_database():
             return json.load(db_file)
     return []
 
-def browse_games(game_database):
-    """Browse the list of games."""
-    for i, game in enumerate(game_database, start=1):
-        print(f"{i}. {game['title']} (ID: {game['id']})")
+def browse_games(game_database, selected_games, page_size=30):
+    """Browse the list of games with pagination."""
+    total_games = len(game_database)
+    total_pages = (total_games + page_size - 1) // page_size
+
+    current_page = 0
+    while True:
+        if len(selected_games) > 10:
+            page_size = 20
+        else:
+            page_size = 30
+
+        start_index = current_page * page_size
+        end_index = min(start_index + page_size, total_games)
+        for i in range(start_index, end_index):
+            game = game_database[i]
+            print(f"{i + 1}. {game['title']} (ID: {game['id']})")
+
+        print(f"\nPage {current_page + 1} of {total_pages}")
+        if current_page > 0:
+            print("p. Previous page")
+        if current_page < total_pages - 1:
+            print("n. Next page")
+        print("q. Quit browsing")
+        print("s. Select games")
+
+        if selected_games:
+            print("\nSelected Games:")
+            for game in selected_games:
+                print(f"- {game['title']} (ID: {game['id']})")
+
+        choice = input("Enter your choice: ").strip().lower()
+        if choice == 'n' and current_page < total_pages - 1:
+            current_page += 1
+        elif choice == 'p' and current_page > 0:
+            current_page -= 1
+        elif choice == 'q':
+            break
+        elif choice == 's':
+            selected_indices = input("Enter the numbers of the games you want to select (comma-separated): ").strip()
+            selected_indices = [int(i) - 1 for i in selected_indices.split(",")]
+            selected_games.extend([game_database[i] for i in selected_indices])
+        else:
+            print("Invalid choice. Please enter 'n', 'p', 'q', or 's'.")
+
+    return selected_games
 
 def search_games(game_database, term):
     """Search games by term."""
@@ -87,22 +129,22 @@ def main():
 
     choice = input("Do you want to browse the list of games (1) or search by term (2)? ").strip()
     
+    selected_games = []
     if choice == "1":
-        browse_games(game_database)
+        selected_games = browse_games(game_database, selected_games)
     elif choice == "2":
         term = input("Enter the search term: ").strip()
         results = search_games(game_database, term)
         if not results:
             print("No games found matching the search term.")
             return
+        selected_indices = input("Enter the numbers of the games you want to select (comma-separated): ").strip()
+        selected_indices = [int(i) - 1 for i in selected_indices.split(",")]
+        selected_games = [results[i] for i in selected_indices]
     else:
         print("Invalid choice. Please enter 1 or 2.")
         return
 
-    selected_indices = input("Enter the numbers of the games you want to select (comma-separated): ").strip()
-    selected_indices = [int(i) - 1 for i in selected_indices.split(",")]
-
-    selected_games = [game_database[i] for i in selected_indices]
     magnet_links = []
 
     for game in selected_games:
