@@ -2,11 +2,14 @@ import os
 import re
 import json
 import webbrowser
+import requests
 from datetime import datetime
 
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 DATABASE_FILE = "gog_games_database.json"
+REAL_DEBRID_API_URL = "https://api.real-debrid.com/rest/1.0/torrents/addMagnet"
+REAL_DEBRID_API_TOKEN = "P3U5O4TYSVICKVHDZH7F6ZQKWMTTYMTUU3OXJMAHHEF7HGREX24Q"  # Replace with your Real-Debrid API token
 
 def load_game_database():
     """Load GOG games database from JSON file."""
@@ -108,6 +111,21 @@ def scan_directory(directory):
     
     return outdated_games, list(detected_games), magnet_links
 
+def add_magnet_to_real_debrid(magnet_link):
+    """Add a magnet link to Real-Debrid."""
+    headers = {
+        "Authorization": f"Bearer {REAL_DEBRID_API_TOKEN}"
+    }
+    data = {
+        "magnet": magnet_link
+    }
+    response = requests.post(REAL_DEBRID_API_URL, headers=headers, data=data)
+    if response.status_code == 201:
+        print(f"Successfully added magnet link to Real-Debrid: {magnet_link}")
+    else:
+        print(f"Failed to add magnet link to Real-Debrid: {magnet_link}")
+        print(f"Response: {response.status_code} - {response.text}")
+
 def main():
     """Main function to handle user interaction and processing."""
     choice = input("Do you want to scan a directory (1) or generate .name files (2)? ").strip()
@@ -136,9 +154,9 @@ def main():
             print(f"{i}. {title} (Local Date: {local_date} -> Latest: {latest})")
         
         if magnet_links:
-            print("\nMagnet Links (for easy mass copying):")
+            print("\nAdding Magnet Links to Real-Debrid:")
             for link in magnet_links:
-                print(link)
+                add_magnet_to_real_debrid(link)
         
         open_pages = input("\nWould you like to open the pages for the games missing infohashes? (y/n): ").strip().lower()
         if open_pages == 'y':
