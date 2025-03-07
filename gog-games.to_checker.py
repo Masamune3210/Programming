@@ -80,9 +80,28 @@ def scan_directory(directory):
                 detected_games.add((game_title, game_id or "N/A"))
             
             if game_title and game_id and last_update:
-                local_date = datetime.fromtimestamp(game_folder.stat().st_mtime).strftime('%Y-%m-%d')
-                if last_update.split("T")[0] != local_date:
-                    outdated_games.append((game_title, local_date, last_update.split("T")[0], game_slug))
+                # Look for the latest non-.name file in the folder
+                latest_file_time = None
+                for entry in os.scandir(game_folder.path):
+                    if entry.is_file() and not entry.name.endswith(".name"):
+                        file_time = entry.stat().st_mtime
+                        if latest_file_time is None or file_time > latest_file_time:
+                            latest_file_time = file_time
+                
+                if latest_file_time:
+                    local_date = datetime.fromtimestamp(latest_file_time)
+                    last_update_time = datetime.strptime(last_update.split("T")[0], '%Y-%m-%d')
+                    
+                    # Convert to Unix epoch
+                    local_epoch = local_date.timestamp()
+                    last_update_epoch = last_update_time.timestamp()
+                    
+                    # Subtract the two and check if the result is negative or zero
+                    if last_update_epoch - local_epoch <= 0:
+                        # Game is up to date
+                        continue
+                    else:
+                        outdated_games.append((game_title, local_date.strftime('%Y-%m-%d'), last_update.split("T")[0], game_slug))
     
     return outdated_games, list(detected_games)
 
