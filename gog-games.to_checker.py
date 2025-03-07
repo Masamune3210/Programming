@@ -3,7 +3,8 @@ import re
 import json
 import webbrowser
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
+import subprocess
 
 GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
@@ -20,7 +21,13 @@ def load_game_database():
             return json.load(db_file)
     return []
 
-game_database = load_game_database()
+def check_database_age():
+    """Check the age of the database file and update if older than a week or if not found."""
+    if not os.path.isfile(DATABASE_FILE) or datetime.now() - datetime.fromtimestamp(os.path.getmtime(DATABASE_FILE)) > timedelta(weeks=1):
+        print("Database is either not found or older than a week. Updating...")
+        subprocess.run(["python", "fetch_gogto_games.py"], check=True)
+        return True
+    return False
 
 def find_game_in_database_by_slug(slug):
     """Find game information in the local database by slug."""
@@ -165,6 +172,10 @@ def select_files(torrent_id):
 
 def main():
     """Main function to handle user interaction and processing."""
+    if check_database_age():
+        global game_database
+        game_database = load_game_database()
+
     choice = input("Do you want to scan a directory (1) or generate .name files (2)? ").strip()
     
     if choice == "2":
