@@ -9,6 +9,8 @@ GOG_API_URL = "https://gog-games.to/api/web/query-game/"
 GOG_GAME_URL = "https://gog-games.to/game/"
 DATABASE_FILE = "gog_games_database.json"
 REAL_DEBRID_API_URL = "https://api.real-debrid.com/rest/1.0/torrents/addMagnet"
+REAL_DEBRID_SELECT_FILES_URL = "https://api.real-debrid.com/rest/1.0/torrents/selectFiles"
+REAL_DEBRID_INFO_URL = "https://api.real-debrid.com/rest/1.0/torrents/info"
 REAL_DEBRID_API_TOKEN = "P3U5O4TYSVICKVHDZH7F6ZQKWMTTYMTUU3OXJMAHHEF7HGREX24Q"  # Replace with your Real-Debrid API token
 
 def load_game_database():
@@ -111,8 +113,21 @@ def scan_directory(directory):
     
     return outdated_games, list(detected_games), magnet_links
 
+def get_torrent_info(torrent_id):
+    """Get torrent information from Real-Debrid."""
+    headers = {
+        "Authorization": f"Bearer {REAL_DEBRID_API_TOKEN}"
+    }
+    response = requests.get(f"{REAL_DEBRID_INFO_URL}/{torrent_id}", headers=headers)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        print(f"Failed to get torrent info for ID: {torrent_id}")
+        print(f"Response: {response.status_code} - {response.text}")
+        return None
+
 def add_magnet_to_real_debrid(magnet_link):
-    """Add a magnet link to Real-Debrid."""
+    """Add a magnet link to Real-Debrid and select all files if available."""
     headers = {
         "Authorization": f"Bearer {REAL_DEBRID_API_TOKEN}"
     }
@@ -122,8 +137,30 @@ def add_magnet_to_real_debrid(magnet_link):
     response = requests.post(REAL_DEBRID_API_URL, headers=headers, data=data)
     if response.status_code == 201:
         print(f"Successfully added magnet link to Real-Debrid: {magnet_link}")
+        torrent_id = response.json().get("id")
+        if torrent_id:
+            torrent_info = get_torrent_info(torrent_id)
+            if torrent_info and torrent_info.get("files"):
+                select_files(torrent_id)
+            else:
+                print(f"No files found for torrent ID: {torrent_id}, skipping file selection.")
     else:
         print(f"Failed to add magnet link to Real-Debrid: {magnet_link}")
+        print(f"Response: {response.status_code} - {response.text}")
+
+def select_files(torrent_id):
+    """Select all files for the given torrent ID in Real-Debrid."""
+    headers = {
+        "Authorization": f"Bearer {REAL_DEBRID_API_TOKEN}"
+    }
+    data = {
+        "files": "all"
+    }
+    response = requests.post(f"{REAL_DEBRID_SELECT_FILES_URL}/{torrent_id}", headers=headers, data=data)
+    if response.status_code == 204:
+        print(f"Successfully selected all files for torrent ID: {torrent_id}")
+    else:
+        print(f"Failed to select files for torrent ID: {torrent_id}")
         print(f"Response: {response.status_code} - {response.text}")
 
 def main():
