@@ -18,11 +18,8 @@ def load_game_database():
             return json.load(db_file)
     return []
 
-def browse_games(game_database, selected_games, page_size=30, filter_infohash=False):
-    """Browse the list of games with pagination and optional filtering by infohash."""
-    if filter_infohash:
-        game_database = [game for game in game_database if 'infohash' in game and game['infohash']]
-    
+def browse_games(game_database, selected_games, page_size=30):
+    """Browse the list of games with pagination."""
     total_games = len(game_database)
     total_pages = (total_games + page_size - 1) // page_size
 
@@ -134,9 +131,7 @@ def main():
     
     selected_games = []
     if choice == "1":
-        filter_choice = input("Do you want to filter games with infohashes only? (y/n): ").strip().lower()
-        filter_infohash = filter_choice == 'y'
-        selected_games = browse_games(game_database, selected_games, filter_infohash=filter_infohash)
+        selected_games = browse_games(game_database, selected_games)
     elif choice == "2":
         term = input("Enter the search term: ").strip()
         results = search_games(game_database, term)
