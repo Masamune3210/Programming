@@ -23,8 +23,8 @@ def find_game_in_database_by_slug(slug):
     for game in game_database:
         db_slug = game["slug"].strip().lower()
         if db_slug == normalized_slug:
-            return game["title"], game["id"], game["slug"], game.get("last_update")
-    return slug, None, None, None
+            return game["title"], game["id"], game["slug"], game.get("last_update"), game.get("infohash")
+    return slug, None, None, None, None
 
 def extract_game_info_from_name_file(game_folder_path):
     """Check for a .name file in the game folder and return the proper title from the database."""
@@ -33,7 +33,7 @@ def extract_game_info_from_name_file(game_folder_path):
             with open(entry.path, 'r', encoding='utf-8') as name_file:
                 raw_slug = name_file.read().strip()
                 return find_game_in_database_by_slug(raw_slug)
-    return None, None, None, None
+    return None, None, None, None, None
 
 def extract_game_info(filename):
     """Extract game title and ID from the filename."""
@@ -41,7 +41,7 @@ def extract_game_info(filename):
     if match:
         title = match.group(1).replace("_", " ").title()
         return find_game_in_database_by_slug(title)
-    return None, None, None, None
+    return None, None, None, None, None
 
 def generate_name_files(output_directory):
     """Generate .name files for all slugs found in the database."""
@@ -60,19 +60,20 @@ def scan_directory(directory):
     """Scan the directory for game installers and compare local dates with the latest updates."""
     outdated_games = []
     detected_games = set()
-    
+    magnet_links = []
+
     for game_folder in os.scandir(directory):
         if game_folder.is_dir():
             if "[FitGirl Repacks]" in game_folder.name or "[DODI Repacks]" in game_folder.name:
                 print(f"Skipping folder: {game_folder.name}")  # Debug print
                 continue
             
-            game_title, game_id, game_slug, last_update = extract_game_info_from_name_file(game_folder.path)
+            game_title, game_id, game_slug, last_update, infohash = extract_game_info_from_name_file(game_folder.path)
             
             if not game_title:
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
-                        game_title, game_id, game_slug, last_update = extract_game_info(entry.name)
+                        game_title, game_id, game_slug, last_update, infohash = extract_game_info(entry.name)
                         if game_title:
                             break
             
@@ -101,9 +102,11 @@ def scan_directory(directory):
                         # Game is up to date
                         continue
                     else:
-                        outdated_games.append((game_title, local_date.strftime('%Y-%m-%d'), last_update.split("T")[0], game_slug))
+                        outdated_games.append((game_title, local_date.strftime('%Y-%m-%d'), last_update.split("T")[0], game_slug, infohash))
+                        if infohash:
+                            magnet_links.append(f"magnet:?xt=urn:btih:{infohash}")
     
-    return outdated_games, list(detected_games)
+    return outdated_games, list(detected_games), magnet_links
 
 def main():
     """Main function to handle user interaction and processing."""
@@ -119,7 +122,7 @@ def main():
         print("Invalid directory. Please enter a valid folder path.")
         return
     
-    outdated_games, detected_games = scan_directory(directory)
+    outdated_games, detected_games, magnet_links = scan_directory(directory)
     
     if detected_games:
         detected_games.sort(key=lambda x: x[0].lower())
@@ -129,13 +132,19 @@ def main():
     
     if outdated_games:
         print("\nOutdated Games Found:")
-        for i, (title, local_date, latest, game_slug) in enumerate(outdated_games, start=1):
+        for i, (title, local_date, latest, game_slug, infohash) in enumerate(outdated_games, start=1):
             print(f"{i}. {title} (Local Date: {local_date} -> Latest: {latest})")
         
-        open_pages = input("\nWould you like to open the pages for these games? (y/n): ").strip().lower()
+        if magnet_links:
+            print("\nMagnet Links (for easy mass copying):")
+            for link in magnet_links:
+                print(link)
+        
+        open_pages = input("\nWould you like to open the pages for the games missing infohashes? (y/n): ").strip().lower()
         if open_pages == 'y':
-            for _, _, _, game_slug in outdated_games:
-                webbrowser.open(f"{GOG_GAME_URL}{game_slug}")
+            for _, _, _, game_slug, infohash in outdated_games:
+                if not infohash:
+                    webbrowser.open(f"{GOG_GAME_URL}{game_slug}")
     else:
         print("\nAll games are up to date!")
 
