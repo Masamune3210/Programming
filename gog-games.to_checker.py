@@ -1,7 +1,6 @@
 import os
 import re
 import json
-import requests
 import webbrowser
 from datetime import datetime
 
