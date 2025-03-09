@@ -113,9 +113,12 @@ def scan_directory(directory):
                 local_epoch = local_date.timestamp()
                 last_update_epoch = last_update_time.timestamp()
 
-                # Subtract the two and check if the result is negative or zero
-                if last_update_epoch - local_epoch <= 0:
-                    # Game is up to date
+                # Introduce a grace period of 3 days (in seconds)
+                grace_seconds = 3 * 24 * 60 * 60  # 259200 seconds
+
+                # Check if the difference is within the grace period
+                if last_update_epoch - local_epoch <= grace_seconds:
+                    # Game is considered up to date
                     continue
                 else:
                     outdated_games.append((game_title, local_date.strftime('%Y-%m-%d'), last_update.split("T")[0], game_slug, infohash))
