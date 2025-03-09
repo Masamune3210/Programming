@@ -97,13 +97,15 @@ def scan_directory(directory):
             if game_title and game_id and last_update:
                 # Look for the latest non-.name file in the folder
                 latest_file_time = None
+                latest_file_entry = None
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and not entry.name.endswith(".name"):
                         file_time = entry.stat().st_mtime
                         if latest_file_time is None or file_time > latest_file_time:
                             latest_file_time = file_time
+                            latest_file_entry = entry
                 
-                if latest_file_time:
+                if latest_file_entry:
                     local_date = datetime.fromtimestamp(latest_file_time)
                     last_update_time = datetime.strptime(last_update.split("T")[0], '%Y-%m-%d')
                     
