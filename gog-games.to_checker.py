@@ -81,47 +81,47 @@ def scan_directory(directory):
             if "[FitGirl Repacks]" in game_folder.name or "[DODI Repacks]" in game_folder.name:
                 print(f"Skipping folder: {game_folder.name}")  # Debug print
                 continue
-            
+
+            installer_entry = None
+            # First, try to extract game info from the .name file.
             game_title, game_id, game_slug, last_update, infohash = extract_game_info_from_name_file(game_folder.path)
-            
+
+            # If .name file did not yield game info, search for the installer exe.
             if not game_title:
                 for entry in os.scandir(game_folder.path):
                     if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
                         game_title, game_id, game_slug, last_update, infohash = extract_game_info(entry.name)
                         if game_title:
+                            installer_entry = entry
                             break
-            
+            else:
+                # When .name file is used, still try to grab one installer file for the date.
+                for entry in os.scandir(game_folder.path):
+                    if entry.is_file() and entry.name.startswith("setup_") and entry.name.endswith(".exe"):
+                        installer_entry = entry
+                        break
+
             if game_title:
                 detected_games.add((game_title, game_id or "N/A"))
-            
-            if game_title and game_id and last_update:
-                # Look for the latest non-.name file in the folder
-                latest_file_time = None
-                latest_file_entry = None
-                for entry in os.scandir(game_folder.path):
-                    if entry.is_file() and not entry.name.endswith(".name"):
-                        file_time = entry.stat().st_mtime
-                        if latest_file_time is None or file_time > latest_file_time:
-                            latest_file_time = file_time
-                            latest_file_entry = entry
-                
-                if latest_file_entry:
-                    local_date = datetime.fromtimestamp(latest_file_time)
-                    last_update_time = datetime.strptime(last_update.split("T")[0], '%Y-%m-%d')
-                    
-                    # Convert to Unix epoch
-                    local_epoch = local_date.timestamp()
-                    last_update_epoch = last_update_time.timestamp()
-                    
-                    # Subtract the two and check if the result is negative or zero
-                    if last_update_epoch - local_epoch <= 0:
-                        # Game is up to date
-                        continue
-                    else:
-                        outdated_games.append((game_title, local_date.strftime('%Y-%m-%d'), last_update.split("T")[0], game_slug, infohash))
-                        if infohash:
-                            magnet_links.append(f"magnet:?xt=urn:btih:{infohash}")
-    
+
+            # Only use the date of one installer file per folder (installer_entry)
+            if game_title and game_id and last_update and installer_entry:
+                local_date = datetime.fromtimestamp(installer_entry.stat().st_mtime)
+                last_update_time = datetime.strptime(last_update.split("T")[0], '%Y-%m-%d')
+
+                # Convert to Unix epoch
+                local_epoch = local_date.timestamp()
+                last_update_epoch = last_update_time.timestamp()
+
+                # Subtract the two and check if the result is negative or zero
+                if last_update_epoch - local_epoch <= 0:
+                    # Game is up to date
+                    continue
+                else:
+                    outdated_games.append((game_title, local_date.strftime('%Y-%m-%d'), last_update.split("T")[0], game_slug, infohash))
+                    if infohash:
+                        magnet_links.append(f"magnet:?xt=urn:btih:{infohash}")
+
     return outdated_games, list(detected_games), magnet_links
 
 def get_torrent_info(torrent_id):
