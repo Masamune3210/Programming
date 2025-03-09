@@ -205,18 +205,27 @@ def main():
         for i, (title, local_date, latest, game_slug, infohash) in enumerate(outdated_games, start=1):
             print(f"{i}. {title} (Local Date: {local_date} -> Latest: {latest})")
         
-        if magnet_links:
-            print("\nAdding Magnet Links to Real-Debrid:")
-            for title, link in zip([game[0] for game in outdated_games], magnet_links):
-                add_magnet_to_real_debrid(title, link)
+        action_choice = input("\nDo you want to send magnets to Real-Debrid (1) or open game pages (2)? ").strip()
         
-        open_pages = input("\nWould you like to open the pages for the games missing infohashes? (y/n): ").strip().lower()
-        if open_pages == 'y':
-            for _, _, _, game_slug, infohash in outdated_games:
-                if not infohash:
-                    webbrowser.open(f"{GOG_GAME_URL}{game_slug}")
+        if action_choice == "1":
+            if magnet_links:
+                print("\nAdding Magnet Links to Real-Debrid:")
+                for title, link in zip([game[0] for game in outdated_games], magnet_links):
+                    add_magnet_to_real_debrid(title, link)
+            
+            open_pages = input("\nWould you like to open the pages for the games missing infohashes? (y/n): ").strip().lower()
+            if open_pages == 'y':
+                for _, _, _, game_slug, infohash in outdated_games:
+                    if not infohash:
+                        webbrowser.open(f"{GOG_GAME_URL}{game_slug}")
+        elif action_choice == "2":
+            for _, _, _, game_slug, _ in outdated_games:
+                webbrowser.open(f"{GOG_GAME_URL}{game_slug}")
     else:
         print("\nAll games are up to date!")
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
