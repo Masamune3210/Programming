@@ -280,6 +280,10 @@ def process_folder(source_folder, destination_folder, handbrakecli_path):
 
     file_progress.close()
 
+    # Clear reference to output file before entering wait loop
+    global current_output_file
+    current_output_file = None
+
     return True
 
 def main():
