@@ -33,7 +33,7 @@ def scan_video_files(source_folder):
     for root, _, files in sorted(os.walk(source_folder), key=lambda x: x[0]):
         print(f"Scanning directory: {root}")
         for file in tqdm(sorted(files), desc=f"Scanning {root}", unit="file", leave=False):
-            if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv|webm|mpg|m4a)$', file, re.IGNORECASE):
+            if re.search(r'\.(mp4|mkv|avi|mov|flv|wmv|webm|mpg|m4v)$', file, re.IGNORECASE):
                 file_path = os.path.join(root, file)
                 video_files.append(file_path)
 
