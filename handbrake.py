@@ -17,7 +17,7 @@ PRESETS = {
     "2160": "4k hdr3",
     "default": "1080p4"
 }
-EXCLUDED_DIRS = ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored", "non-eng"]
+EXCLUDED_DIRS = ["more", "retag", "$RECYCLE.BIN", "System Volume Information", "errored", "non-eng", "anime"]
 GAME_FOLDERS = ["D:\\Games", "E:\\Games", "D:\\GOG Games", "D:\\XboxGames",
                  "F:\\Emulation\\Emulators", "F:\\Games", "F:\\XboxGames", "G:\\Games",
                    "G:\\SteamLibrary", "G:\\XboxGames"]  # Add paths to game folders here
